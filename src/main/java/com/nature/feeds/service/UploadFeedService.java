@@ -4,7 +4,7 @@ import java.util.ArrayList;
 
 public interface UploadFeedService {
 
-    public Boolean uploadFeedsOnFTPLocation(ArrayList<String> todaysFeedName, ArrayList<String> yesterdaysFeedNames)
+    public Boolean feedsUploadOperation(ArrayList<String> todaysFeedName, ArrayList<String> yesterdaysFeedNames)
             throws Exception;
 
 }

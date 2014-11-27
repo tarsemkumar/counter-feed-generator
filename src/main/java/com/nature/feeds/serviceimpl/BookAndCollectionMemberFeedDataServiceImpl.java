@@ -2,15 +2,16 @@ package com.nature.feeds.serviceimpl;
 
 import java.io.IOException;
 import java.io.StringReader;
-import java.util.ResourceBundle;
 
 import org.apache.commons.digester.Digester;
 import org.xml.sax.SAXException;
 
-import com.google.inject.Injector;
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
 import com.nature.components.extractor.MarklogicDataExtractorRequestInfo;
 import com.nature.components.extractor.service.ExternalServiceCaller;
 import com.nature.components.extractor.service.ExternalServiceCallerException;
+import com.nature.components.service.resources.IResourceLookUp;
 import com.nature.feeds.bean.CollectionBean;
 import com.nature.feeds.bean.ItemBean;
 import com.nature.feeds.bean.ResultsBean;
@@ -19,26 +20,32 @@ import com.nature.feeds.service.BookAndCollectionMemberFeedDataService;
 
 public class BookAndCollectionMemberFeedDataServiceImpl implements BookAndCollectionMemberFeedDataService {
 
-    ResourceBundle messages = ResourceBundle.getBundle("ApplicationResources");
-    //private ExternalServiceCaller<MarklogicDataExtractorRequestInfo> externalServiceCaller ;
-    private ExternalServiceCaller<MarklogicDataExtractorRequestInfo> externalServiceCaller;
+    private final ExternalServiceCaller<MarklogicDataExtractorRequestInfo> externalServiceCaller;
+    private final IResourceLookUp resourceLookUp;
+
+    @SuppressWarnings("unchecked")
+    @Inject
+    public BookAndCollectionMemberFeedDataServiceImpl(ExternalServiceCaller externalServiceCaller,
+            @Named("lib_resource_lookup") IResourceLookUp resourceLookUp) {
+        this.externalServiceCaller = externalServiceCaller;
+        this.resourceLookUp = resourceLookUp;
+    }
 
     /* This method will use to get data from mark logic data base. */
 
     @Override
-    @SuppressWarnings("unchecked")
-    public ResultsBean getBookAndCollectionMemberFeedData(Injector injector) throws Exception {
+    public ResultsBean getBookAndCollectionMemberFeedData() throws Exception {
 
         ResultsBean resultsBean = new ResultsBean();
-        externalServiceCaller = injector.getInstance(ExternalServiceCaller.class);
         String xmlFeedData = getTitlesDetailsForMpsFeeds();
         resultsBean = feedDataDigest(xmlFeedData);
         return resultsBean;
     }
 
     private String getTitlesDetailsForMpsFeeds() throws FatalException, ExternalServiceCallerException {
-        return invokeModule(messages.getString("admin.module.namespace"), messages.getString("admin.module.uri"),
-                messages.getString("get.article.metadata.function"));
+        return invokeModule(resourceLookUp.getResource("admin.module.namespace"),
+                resourceLookUp.getResource("admin.module.uri"),
+                resourceLookUp.getResource("get.article.metadata.function"));
     }
 
     private String invokeModule(String moduleNamespace, String moduleURI, String functionName, Object... parameters)

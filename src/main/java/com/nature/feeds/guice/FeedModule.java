@@ -28,12 +28,13 @@ import com.nature.feeds.serviceimpl.GenerateBookFeedServiceImpl;
 import com.nature.feeds.serviceimpl.GenerateCollectionFeedServiceImpl;
 import com.nature.feeds.serviceimpl.GenerateCollectionMemberFeedServiceImpl;
 import com.nature.feeds.serviceimpl.UploadFeedServiceImpl;
+import com.nature.feeds.startup.FeedGenerator;
 import com.nature.marklogic.ConnectionBean;
 import com.nature.marklogic.Connector;
 import com.nature.marklogic.ConnectorImpl;
 import com.nature.marklogic.ContentSourceProvider;
 import com.nature.marklogic.QueryBuilder;
-import com.util.Constants;
+import com.util.FeedsLogger;
 
 public class FeedModule implements Module {
 
@@ -51,6 +52,7 @@ public class FeedModule implements Module {
         binder.bind(UploadFeedService.class).to(UploadFeedServiceImpl.class);
         binder.bind(EmailNotificationService.class).to(EmailNotificationServiceImpl.class);
         binder.bind(QueryBuilder.class);
+        binder.bind(FeedGenerator.class);
     }
 
     @Provides
@@ -58,9 +60,9 @@ public class FeedModule implements Module {
     @Singleton
     private IResourceLookUp getRsourceLookup() {
         try {
-            return new ResourceLookUp("DatabaseResources");
+            return new ResourceLookUp("ApplicationResources");
         } catch (IOException e) {
-            Constants.ERROR.error("Exception reading properties", e);
+            FeedsLogger.ERROR.error("Exception reading properties", e);
         }
         return null;
     }

@@ -12,7 +12,7 @@ public class Main {
      * The execution of this application will start from here.
      */
     public static void main(String[] args) {
-        FeedGenerator feedGenerator = new FeedGenerator(injector);
+        FeedGenerator feedGenerator = injector.getInstance(FeedGenerator.class);
         feedGenerator.fetchFeedData();
     }
 }

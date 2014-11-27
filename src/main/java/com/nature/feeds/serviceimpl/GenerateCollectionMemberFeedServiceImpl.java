@@ -4,7 +4,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.ResourceBundle;
 
 import jxl.Workbook;
 import jxl.WorkbookSettings;
@@ -17,22 +16,30 @@ import jxl.write.WritableWorkbook;
 import jxl.write.WriteException;
 import jxl.write.biff.RowsExceededException;
 
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
+import com.nature.components.service.resources.IResourceLookUp;
 import com.nature.feeds.bean.ItemBean;
 import com.nature.feeds.bean.ResultsBean;
 import com.nature.feeds.service.GenerateCollectionMemberFeedService;
-import com.util.Constants;
+import com.util.FeedsLogger;
 
 public class GenerateCollectionMemberFeedServiceImpl implements GenerateCollectionMemberFeedService {
 
-    ResourceBundle messages = ResourceBundle.getBundle("ApplicationResources");
     private WritableCellFormat arial;
     private WritableCellFormat arialBoldUnderline;
+    private final IResourceLookUp resourceLookUp;
+
+    @Inject
+    public GenerateCollectionMemberFeedServiceImpl(@Named("lib_resource_lookup") IResourceLookUp resourceLookUp) {
+        this.resourceLookUp = resourceLookUp;
+    }
 
     /* This method will use to generate collection member feed. */
 
     @Override
     public void generateCollctionMemberFeed(String fileName, String filePath, ResultsBean beans) throws Exception {
-        File file = new File(filePath + messages.getString("file.location.seperator") + fileName);
+        File file = new File(filePath + resourceLookUp.getResource("file.location.seperator") + fileName);
         WorkbookSettings wbSettings = new WorkbookSettings();
         wbSettings.setLocale(new Locale("en", "EN"));
         WritableWorkbook workbook = null;
@@ -43,7 +50,7 @@ public class GenerateCollectionMemberFeedServiceImpl implements GenerateCollecti
             createLabel(excelSheet, getCollectionMemberFeedsHeaderList());
             createCollectionMemberContent(excelSheet, getNonByoTitleList(beans));
             workbook.write();
-            Constants.INFO.info("\n**** Collection Member feed has been generated. ****");
+            FeedsLogger.INFO.info("\n**** Collection Member feed has been generated. ****");
         } finally {
             if (workbook != null) {
                 workbook.close();
@@ -53,8 +60,8 @@ public class GenerateCollectionMemberFeedServiceImpl implements GenerateCollecti
 
     private List<String> getCollectionMemberFeedsHeaderList() throws Exception {
         List<String> headerList = new ArrayList<String>();
-        headerList.add(messages.getString("collection.id"));
-        headerList.add(messages.getString("book.id"));
+        headerList.add(resourceLookUp.getResource("collection.id"));
+        headerList.add(resourceLookUp.getResource("book.id"));
         return headerList;
     }
 
@@ -86,23 +93,28 @@ public class GenerateCollectionMemberFeedServiceImpl implements GenerateCollecti
             throws WriteException, RowsExceededException, Exception {
         ItemBean bean;
 
-        for (int index = 0; index < nonByoTitleList.size(); index++) {
-            bean = nonByoTitleList.get(index);
-            sheet.setColumnView(0, 20);
-            addNumber(sheet, 0, index + 1, bean.getCollections().get(0).getCollectionIsbn());
-            sheet.setColumnView(1, 20);
-            addNumber(sheet, 1, index + 1, bean.getThirteenDigitIsbn());
+        if ((nonByoTitleList != null) && (nonByoTitleList.size() > 0)) {
+            for (int index = 0; index < nonByoTitleList.size(); index++) {
+                bean = nonByoTitleList.get(index);
+                sheet.setColumnView(0, 20);
+                addNumber(sheet, 0, index + 1, bean.getCollections().get(0).getCollectionIsbn());
+                sheet.setColumnView(1, 20);
+                addNumber(sheet, 1, index + 1, bean.getThirteenDigitIsbn());
+            }
         }
     }
 
     private List<ItemBean> getNonByoTitleList(ResultsBean beans) throws Exception {
         List<ItemBean> nonByoTitleList = new ArrayList<ItemBean>();
         int i = 0;
-        for (ItemBean bean : beans.getItems()) {
+        if (beans != null) {
+            for (ItemBean bean : beans.getItems()) {
 
-            if (!(messages.getString("byo")).equalsIgnoreCase(bean.getCollections().get(0).getCollectionAcronym())) {
-                i = i + 1;
-                nonByoTitleList.add(bean);
+                if (!(resourceLookUp.getResource("byo")).equalsIgnoreCase(bean.getCollections().get(0)
+                        .getCollectionAcronym())) {
+                    i = i + 1;
+                    nonByoTitleList.add(bean);
+                }
             }
         }
         return nonByoTitleList;

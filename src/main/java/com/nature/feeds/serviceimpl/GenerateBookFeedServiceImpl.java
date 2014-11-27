@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.ResourceBundle;
 
 import jxl.Workbook;
 import jxl.WorkbookSettings;
@@ -24,27 +23,34 @@ import jxl.write.WritableWorkbook;
 import jxl.write.WriteException;
 import jxl.write.biff.RowsExceededException;
 
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
+import com.nature.components.service.resources.IResourceLookUp;
 import com.nature.feeds.bean.ItemBean;
 import com.nature.feeds.bean.ResultsBean;
 import com.nature.feeds.service.GenerateBookFeedService;
-import com.util.Constants;
+import com.util.FeedsLogger;
 
 public class GenerateBookFeedServiceImpl implements GenerateBookFeedService {
 
     private WritableCellFormat arialBoldUnderline;
     private WritableCellFormat arial;
-    Connection conn = null;
-    PreparedStatement stmt = null;
-    ResultSet rs = null;
-    ResourceBundle messages = ResourceBundle.getBundle("ApplicationResources");
-    ResourceBundle databaseResources = ResourceBundle.getBundle("DatabaseResources");
+    private Connection conn;
+    private PreparedStatement stmt;
+    private ResultSet rs;
+    private final IResourceLookUp resourceLookUp;
+
+    @Inject
+    public GenerateBookFeedServiceImpl(@Named("lib_resource_lookup") IResourceLookUp resourceLookUp) {
+        this.resourceLookUp = resourceLookUp;
+    }
 
     /* This method will use to generate book feed. */
     @Override
     public void generateMpsBookFeed(String fileName, String filePath, ResultsBean feedDataBeans,
             Map<String, String> groupCodes) throws Exception {
 
-        File file = new File(filePath + messages.getString("file.location.seperator") + fileName);
+        File file = new File(filePath + resourceLookUp.getResource("file.location.seperator") + fileName);
         WorkbookSettings wbSettings = new WorkbookSettings();
         wbSettings.setLocale(new Locale("en", "EN"));
         WritableWorkbook workbook = null;
@@ -55,7 +61,7 @@ public class GenerateBookFeedServiceImpl implements GenerateBookFeedService {
             createLabel(excelSheet, getBookFeedsHeaderList());
             createBookContent(excelSheet, feedDataBeans, groupCodes);
             workbook.write();
-            Constants.INFO.info("\n**** Book Feed has been generated. ****");
+            FeedsLogger.INFO.info("\n**** Book Feed has been generated. ****");
         } finally {
             if (workbook != null) {
                 workbook.close();
@@ -90,13 +96,13 @@ public class GenerateBookFeedServiceImpl implements GenerateBookFeedService {
 
     private List<String> getBookFeedsHeaderList() throws Exception {
         List<String> headerList = new ArrayList<String>();
-        headerList.add(messages.getString("book.id"));
-        headerList.add(messages.getString("book.title"));
-        headerList.add(messages.getString("grouping"));
-        headerList.add(messages.getString("publisher"));
-        headerList.add(messages.getString("book.isbn"));
-        headerList.add(messages.getString("platform"));
-        headerList.add(messages.getString("doi"));
+        headerList.add(resourceLookUp.getResource("book.id"));
+        headerList.add(resourceLookUp.getResource("book.title"));
+        headerList.add(resourceLookUp.getResource("grouping"));
+        headerList.add(resourceLookUp.getResource("publisher"));
+        headerList.add(resourceLookUp.getResource("book.isbn"));
+        headerList.add(resourceLookUp.getResource("platform"));
+        headerList.add(resourceLookUp.getResource("doi"));
         return headerList;
     }
 
@@ -105,24 +111,27 @@ public class GenerateBookFeedServiceImpl implements GenerateBookFeedService {
 
         ItemBean bean;
         int i = 0;
-        for (int index = 0; index < beans.getItems().size(); index++) {
 
-            bean = beans.getItems().get(index);
-            sheet.setColumnView(0, 20);
-            addNumber(sheet, 0, index + 1, bean.getThirteenDigitIsbn());
-            sheet.setColumnView(1, 20);
-            addLabel(sheet, 1, index + 1, bean.getTitle());
-            sheet.setColumnView(2, 16);
-            addLabel(sheet, 2, index + 1, getGrouping(bean.getCollections().get(0).getCollectionWorkid(), groupCodes));
-            sheet.setColumnView(3, 20);
-            addLabel(sheet, 3, index + 1, messages.getString("palgrave.macmillan"));
-            sheet.setColumnView(4, 16);
-            addNumber(sheet, 4, index + 1, bean.getThirteenDigitIsbn());
-            sheet.setColumnView(5, 16);
-            addLabel(sheet, 5, index + 1, messages.getString("palgrave.connect"));
-            sheet.setColumnView(6, 20);
-            addLabel(sheet, 6, index + 1, bean.getDoi());
-            i = i + 1;
+        if (beans != null) {
+            for (int index = 0; index < beans.getItems().size(); index++) {
+                bean = beans.getItems().get(index);
+                sheet.setColumnView(0, 20);
+                addNumber(sheet, 0, index + 1, bean.getThirteenDigitIsbn());
+                sheet.setColumnView(1, 20);
+                addLabel(sheet, 1, index + 1, bean.getTitle());
+                sheet.setColumnView(2, 16);
+                addLabel(sheet, 2, index + 1,
+                        getGrouping(bean.getCollections().get(0).getCollectionWorkid(), groupCodes));
+                sheet.setColumnView(3, 20);
+                addLabel(sheet, 3, index + 1, resourceLookUp.getResource("palgrave.macmillan"));
+                sheet.setColumnView(4, 16);
+                addNumber(sheet, 4, index + 1, bean.getThirteenDigitIsbn());
+                sheet.setColumnView(5, 16);
+                addLabel(sheet, 5, index + 1, resourceLookUp.getResource("palgrave.connect"));
+                sheet.setColumnView(6, 20);
+                addLabel(sheet, 6, index + 1, bean.getDoi());
+                i = i + 1;
+            }
         }
     }
 
@@ -141,7 +150,6 @@ public class GenerateBookFeedServiceImpl implements GenerateBookFeedService {
 
     @Override
     public Map<String, String> getCollectionGroupMap() throws Exception {
-
         Map<String, String> groupCodes = new HashMap<String, String>();
         Map<String, String> groupIdsByCode = getPCProductGroupIds();
         Map<String, String> groupNamesById = getPCProductGroups();
@@ -155,13 +163,12 @@ public class GenerateBookFeedServiceImpl implements GenerateBookFeedService {
     private Map<String, String> getPCProductGroupIds() throws Exception {
         Map<String, String> productGroupByGroupCodeMap = new HashMap<String, String>();
         try {
-            Class.forName(databaseResources.getString("jdbc.driver"));
-            conn = DriverManager.getConnection(databaseResources.getString("db.url"),
-                    databaseResources.getString("user"), databaseResources.getString("pass"));
-            StringBuilder query = new StringBuilder();
-            query.append(" SELECT product_group_id,product_group_code "
-                    + " FROM product_group ORDER BY product_group.product_group_code ");
-            stmt = conn.prepareStatement(query.toString());
+            Class.forName(resourceLookUp.getResource("jdbc.driver"));
+            conn = DriverManager.getConnection(resourceLookUp.getResource("db.url"),
+                    resourceLookUp.getResource("user"), resourceLookUp.getResource("pass"));
+            String query = " SELECT product_group_id,product_group_code "
+                    + " FROM product_group ORDER BY product_group.product_group_code ";
+            stmt = conn.prepareStatement(query);
             rs = stmt.executeQuery();
             if (rs != null) {
                 while (rs.next()) {
@@ -187,13 +194,12 @@ public class GenerateBookFeedServiceImpl implements GenerateBookFeedService {
     private Map<String, String> getPCProductGroups() throws Exception {
         Map<String, String> productGroupByIdMap = new HashMap<String, String>();
         try {
-            Class.forName(databaseResources.getString("jdbc.driver"));
-            conn = DriverManager.getConnection(databaseResources.getString("db.url"),
-                    databaseResources.getString("user"), databaseResources.getString("pass"));
-            StringBuilder query = new StringBuilder();
-            query.append(" SELECT product_group_id,product_group_desc "
-                    + " FROM product_group ORDER BY product_group.product_group_code ");
-            stmt = conn.prepareStatement(query.toString());
+            Class.forName(resourceLookUp.getResource("jdbc.driver"));
+            conn = DriverManager.getConnection(resourceLookUp.getResource("db.url"),
+                    resourceLookUp.getResource("user"), resourceLookUp.getResource("pass"));
+            String query = " SELECT product_group_id,product_group_desc "
+                    + " FROM product_group ORDER BY product_group.product_group_code ";
+            stmt = conn.prepareStatement(query);
             rs = stmt.executeQuery();
             if (rs != null) {
                 while (rs.next()) {

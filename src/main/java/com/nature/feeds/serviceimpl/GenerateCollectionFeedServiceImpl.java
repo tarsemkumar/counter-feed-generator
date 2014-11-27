@@ -4,7 +4,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.ResourceBundle;
 
 import jxl.Workbook;
 import jxl.WorkbookSettings;
@@ -17,15 +16,23 @@ import jxl.write.WritableWorkbook;
 import jxl.write.WriteException;
 import jxl.write.biff.RowsExceededException;
 
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
+import com.nature.components.service.resources.IResourceLookUp;
 import com.nature.feeds.bean.CollectionBean;
 import com.nature.feeds.service.GenerateCollectionFeedService;
-import com.util.Constants;
+import com.util.FeedsLogger;
 
 public class GenerateCollectionFeedServiceImpl implements GenerateCollectionFeedService {
 
     private WritableCellFormat arial;
     private WritableCellFormat arialBoldUnderline;
-    ResourceBundle messages = ResourceBundle.getBundle("ApplicationResources");
+    private final IResourceLookUp resourceLookUp;
+
+    @Inject
+    public GenerateCollectionFeedServiceImpl(@Named("lib_resource_lookup") IResourceLookUp resourceLookUp) {
+        this.resourceLookUp = resourceLookUp;
+    }
 
     /* This method will use to generate collection feed. */
     @Override
@@ -36,7 +43,7 @@ public class GenerateCollectionFeedServiceImpl implements GenerateCollectionFeed
         if (directory.exists() == Boolean.FALSE) {
             directory.mkdir();
         }
-        File file = new File(filePath + messages.getString("file.location.seperator") + fileName);
+        File file = new File(filePath + resourceLookUp.getResource("file.location.seperator") + fileName);
         WorkbookSettings wbSettings = new WorkbookSettings();
         wbSettings.setLocale(new Locale("en", "EN"));
         WritableWorkbook workbook = null;
@@ -47,7 +54,7 @@ public class GenerateCollectionFeedServiceImpl implements GenerateCollectionFeed
             createLabel(excelSheet, getCollectionFeedsHeaderList());
             createCollectionContent(excelSheet, collectionFeedDataList);
             workbook.write();
-            Constants.INFO.info("\n**** Collection Feed has been generated. ****");
+            FeedsLogger.INFO.info("\n**** Collection Feed has been generated. ****");
         } finally {
             if (workbook != null) {
                 workbook.close();
@@ -76,12 +83,12 @@ public class GenerateCollectionFeedServiceImpl implements GenerateCollectionFeed
 
     private List<String> getCollectionFeedsHeaderList() throws Exception {
         List<String> headerList = new ArrayList<String>();
-        headerList.add(messages.getString("collection.id"));
-        headerList.add(messages.getString("collection.title"));
-        headerList.add(messages.getString("grouping"));
-        headerList.add(messages.getString("publisher"));
-        headerList.add(messages.getString("collection.isbn"));
-        headerList.add(messages.getString("platform"));
+        headerList.add(resourceLookUp.getResource("collection.id"));
+        headerList.add(resourceLookUp.getResource("collection.title"));
+        headerList.add(resourceLookUp.getResource("grouping"));
+        headerList.add(resourceLookUp.getResource("publisher"));
+        headerList.add(resourceLookUp.getResource("collection.isbn"));
+        headerList.add(resourceLookUp.getResource("platform"));
         return headerList;
     }
 
@@ -94,21 +101,22 @@ public class GenerateCollectionFeedServiceImpl implements GenerateCollectionFeed
     private void createCollectionContent(WritableSheet sheet, List<CollectionBean> collectionFeedDataList)
             throws WriteException, RowsExceededException, NumberFormatException, Exception {
         CollectionBean bean;
-
-        for (int index = 0; index < collectionFeedDataList.size(); index++) {
-            bean = collectionFeedDataList.get(index);
-            sheet.setColumnView(0, 20);
-            addNumber(sheet, 0, index + 1, bean.getIsbn());
-            sheet.setColumnView(1, 20);
-            addLabel(sheet, 1, index + 1, bean.getProductDesc());
-            sheet.setColumnView(2, 16);
-            addLabel(sheet, 2, index + 1, bean.getProductGroupDesc());
-            sheet.setColumnView(3, 20);
-            addLabel(sheet, 3, index + 1, messages.getString("palgrave.macmillan"));
-            sheet.setColumnView(4, 16);
-            addNumber(sheet, 4, index + 1, bean.getIsbn());
-            sheet.setColumnView(5, 16);
-            addLabel(sheet, 5, index + 1, messages.getString("palgrave.connect"));
+        if ((collectionFeedDataList != null) && (collectionFeedDataList.size() > 0)) {
+            for (int index = 0; index < collectionFeedDataList.size(); index++) {
+                bean = collectionFeedDataList.get(index);
+                sheet.setColumnView(0, 20);
+                addNumber(sheet, 0, index + 1, bean.getIsbn());
+                sheet.setColumnView(1, 20);
+                addLabel(sheet, 1, index + 1, bean.getProductDesc());
+                sheet.setColumnView(2, 16);
+                addLabel(sheet, 2, index + 1, bean.getProductGroupDesc());
+                sheet.setColumnView(3, 20);
+                addLabel(sheet, 3, index + 1, resourceLookUp.getResource("palgrave.macmillan"));
+                sheet.setColumnView(4, 16);
+                addNumber(sheet, 4, index + 1, bean.getIsbn());
+                sheet.setColumnView(5, 16);
+                addLabel(sheet, 5, index + 1, resourceLookUp.getResource("palgrave.connect"));
+            }
         }
     }
 

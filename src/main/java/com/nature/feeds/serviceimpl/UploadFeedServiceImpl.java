@@ -6,40 +6,44 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.ResourceBundle;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
-import org.apache.commons.net.ftp.FTPReply;
 
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
+import com.nature.components.service.resources.IResourceLookUp;
 import com.nature.feeds.service.UploadFeedService;
-import com.util.Constants;
+import com.util.FeedsLogger;
 
 public class UploadFeedServiceImpl implements UploadFeedService {
 
-    ResourceBundle ftpResources = ResourceBundle.getBundle("DatabaseResources");
-    ResourceBundle fileUploadResources = ResourceBundle.getBundle("ApplicationResources");
-    FTPClient ftpClient = null;
+    private FTPClient ftpClient = null;
+    private final IResourceLookUp resourceLookUp;
+
+    @Inject
+    public UploadFeedServiceImpl(@Named("lib_resource_lookup") IResourceLookUp resourceLookUp) {
+        this.resourceLookUp = resourceLookUp;
+    }
 
     /* This method will use to start feeds uploading process */
 
     @Override
-    public Boolean uploadFeedsOnFTPLocation(ArrayList<String> todaysFeedName, ArrayList<String> yesterdaysFeedNames)
+    public Boolean feedsUploadOperation(ArrayList<String> todaysFeedName, ArrayList<String> yesterdaysFeedNames)
             throws Exception {
 
-        Boolean status = Boolean.FALSE;
+        Boolean feedsUploadOperationStepsStatus = Boolean.FALSE;
         try {
             ftpClient = new FTPClient();
-            status = setFtpConnection(todaysFeedName, yesterdaysFeedNames);
-            if (status == Boolean.TRUE) {
-                status = uploadTodaysFeedsOnFTPLocation(todaysFeedName);
+            feedsUploadOperationStepsStatus = setFtpConnection(todaysFeedName, yesterdaysFeedNames);
+            if (feedsUploadOperationStepsStatus == Boolean.TRUE) {
+                feedsUploadOperationStepsStatus = uploadTodaysFeedsOnFTPLocation(todaysFeedName);
             }
-            if (status == Boolean.TRUE) {
-                status = deleteYesterdaysFeedsFromFTPLocation(yesterdaysFeedNames);
+            if (feedsUploadOperationStepsStatus == Boolean.TRUE) {
+                feedsUploadOperationStepsStatus = deleteYesterdaysFeedsFromFTPLocation(yesterdaysFeedNames);
                 deleteFeedsFromLocalLocation();
             }
-
         } finally {
             if (ftpClient.isConnected()) {
                 ftpClient.logout();
@@ -47,7 +51,7 @@ public class UploadFeedServiceImpl implements UploadFeedService {
             }
         }
 
-        return status;
+        return feedsUploadOperationStepsStatus;
     }
 
     /* This method will use to create connection with FTP location */
@@ -57,19 +61,16 @@ public class UploadFeedServiceImpl implements UploadFeedService {
 
         Boolean ftpConnectionStatus = Boolean.FALSE;
 
-        ftpClient.connect(ftpResources.getString("ftp.host"), Integer.parseInt(ftpResources.getString("ftp.port")));
-        int replyCode = ftpClient.getReplyCode();
-        if (!FTPReply.isPositiveCompletion(replyCode)) {
-            Constants.INFO.info("\n**** FTP connection creation operation failed. Server reply code: " + replyCode
-                    + " . ****");
-        }
-        boolean success = ftpClient.login(ftpResources.getString("ftp.username"),
-                ftpResources.getString("ftp.password"));
+        ftpClient.connect(resourceLookUp.getResource("ftp.host"),
+                Integer.parseInt(resourceLookUp.getResource("ftp.port")));
+        ftpClient.getReplyCode();
+        boolean success = ftpClient.login(resourceLookUp.getResource("ftp.username"),
+                resourceLookUp.getResource("ftp.password"));
         if (!success) {
-            Constants.INFO.info("\n**** FTP login operation failed. ****");
+            FeedsLogger.INFO.info("\n**** FTP login operation failed. ****");
         } else {
             ftpConnectionStatus = Boolean.TRUE;
-            Constants.INFO.info("\n**** FTP connection has been created. ****");
+            FeedsLogger.INFO.info("\n**** FTP connection has been created. ****");
         }
 
         return ftpConnectionStatus;
@@ -87,7 +88,7 @@ public class UploadFeedServiceImpl implements UploadFeedService {
 
         try {
             if ((todaysFeedNames != null) && (todaysFeedNames.size() > 0)) {
-                ftpClient.makeDirectory(ftpResources.getString("ftp.remote.path"));
+                ftpClient.makeDirectory(resourceLookUp.getResource("ftp.remote.path"));
 
                 /* These three lines are very important during feeds uploading */
                 ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
@@ -95,17 +96,17 @@ public class UploadFeedServiceImpl implements UploadFeedService {
                 ftpClient.enterLocalPassiveMode();
 
                 for (int index = 0; index < todaysFeedNames.size(); index++) {
-                    localFile = new File(fileUploadResources.getString("file.location")
-                            + fileUploadResources.getString("file.location.seperator") + todaysFeedNames.get(index));
-                    remoteFile = ftpResources.getString("ftp.remote.path") + todaysFeedNames.get(index);
+                    localFile = new File(resourceLookUp.getResource("file.location")
+                            + resourceLookUp.getResource("file.location.seperator") + todaysFeedNames.get(index));
+                    remoteFile = resourceLookUp.getResource("ftp.remote.path") + todaysFeedNames.get(index);
                     inputStream = new FileInputStream(localFile);
                     boolean done = ftpClient.storeFile(remoteFile, inputStream);
                     inputStream.close();
                     if (done) {
-                        Constants.INFO.info("\n**** " + todaysFeedNames.get(index) + " file has been uploaded. ****");
+                        FeedsLogger.INFO.info("\n**** " + todaysFeedNames.get(index) + " file has been uploaded. ****");
                         feedUploadStatus = Boolean.TRUE;
                     } else {
-                        Constants.INFO.info("\n**** " + todaysFeedNames.get(index)
+                        FeedsLogger.INFO.info("\n**** " + todaysFeedNames.get(index)
                                 + " file is not uploaded successfully. ****");
                         feedUploadStatus = Boolean.FALSE;
                         break;
@@ -127,14 +128,14 @@ public class UploadFeedServiceImpl implements UploadFeedService {
         Boolean feedDeletionStatus = Boolean.FALSE;
         if ((yesterdaysFeedNames != null) && (yesterdaysFeedNames.size() > 0)) {
             for (int index = 0; index < yesterdaysFeedNames.size(); index++) {
-                Boolean done = ftpClient.deleteFile(ftpResources.getString("ftp.remote.path")
+                Boolean done = ftpClient.deleteFile(resourceLookUp.getResource("ftp.remote.path")
                         + yesterdaysFeedNames.get(index));
                 if (done) {
                     feedDeletionStatus = Boolean.TRUE;
-                    Constants.INFO.info("\n**** " + yesterdaysFeedNames.get(index) + " file has been deleted. ****");
+                    FeedsLogger.INFO.info("\n**** " + yesterdaysFeedNames.get(index) + " file has been deleted. ****");
                 } else {
                     feedDeletionStatus = Boolean.FALSE;
-                    Constants.INFO.info("\n**** " + yesterdaysFeedNames.get(index)
+                    FeedsLogger.INFO.info("\n**** " + yesterdaysFeedNames.get(index)
                             + " file is not deleted successfully. ****");
                     break;
                 }
@@ -146,9 +147,9 @@ public class UploadFeedServiceImpl implements UploadFeedService {
     /* This method will use to delete feeds from local location */
 
     private void deleteFeedsFromLocalLocation() throws IOException {
-        Constants.INFO.info("\n**** Feeds deletion from local location has been started. ****");
-        FileUtils.cleanDirectory(new File(fileUploadResources.getString("file.location")
-                + fileUploadResources.getString("file.location.seperator")));
-        Constants.INFO.info("\n***  Feeds deletion from local location has been completed. ****");
+        FeedsLogger.INFO.info("\n**** Feeds deletion from local location has been started. ****");
+        FileUtils.cleanDirectory(new File(resourceLookUp.getResource("file.location")
+                + resourceLookUp.getResource("file.location.seperator")));
+        FeedsLogger.INFO.info("\n***  Feeds deletion from local location has been completed. ****");
     }
 }

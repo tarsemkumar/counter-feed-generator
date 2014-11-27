@@ -6,36 +6,44 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.ResourceBundle;
+
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
+import com.nature.components.service.resources.IResourceLookUp;
 import com.nature.feeds.bean.CollectionBean;
 import com.nature.feeds.service.CollectionFeedDataService;
 
 public class CollectionFeedDataServiceImpl implements CollectionFeedDataService {
 
-    Connection conn = null;
-    PreparedStatement stmt = null;
-    ResultSet rs = null;
-    List<CollectionBean> bookAndCollectionMemberFeedDataList = new ArrayList<CollectionBean>();
-    CollectionBean collectionBean = null;
-    ResourceBundle messages = ResourceBundle.getBundle("DatabaseResources");
+    private Connection conn;
+    private PreparedStatement stmt;
+    private ResultSet rs;
+    private List<CollectionBean> bookAndCollectionMemberFeedDataList;
+    private CollectionBean collectionBean;
+    private final IResourceLookUp resourceLookUp;
+
+    @Inject
+    public CollectionFeedDataServiceImpl(@Named("lib_resource_lookup") IResourceLookUp resourceLookUp) {
+        this.resourceLookUp = resourceLookUp;
+    }
 
     /* This method will use to get Collection feed data from Mysql data base */
 
     @Override
     public List<CollectionBean> getCollectionFeedData() throws Exception {
         try {
-            Class.forName(messages.getString("jdbc.driver"));
-            conn = DriverManager.getConnection(messages.getString("db.url"), messages.getString("user"),
-                    messages.getString("pass"));
-            StringBuilder query = new StringBuilder();
-            query.append(" SELECT product.isbn , product.product_desc , productGroup.product_group_desc "
+            Class.forName(resourceLookUp.getResource("jdbc.driver"));
+            conn = DriverManager.getConnection(resourceLookUp.getResource("db.url"),
+                    resourceLookUp.getResource("user"), resourceLookUp.getResource("pass"));
+            String query = " SELECT product.isbn , product.product_desc , productGroup.product_group_desc "
                     + " FROM product AS product , product_group AS productGroup " + " WHERE "
                     + " product.product_code <> 'PALCONAFEE' AND " + " product.is_searchable = TRUE AND "
                     + " product.product_code <> 'BYO' AND "
-                    + " product.product_group_id = productGroup.product_group_id " + " ORDER BY product.product_code;");
-            stmt = conn.prepareStatement(query.toString());
+                    + " product.product_group_id = productGroup.product_group_id " + " ORDER BY product.product_code ";
+            stmt = conn.prepareStatement(query);
             rs = stmt.executeQuery();
             if (rs != null) {
+                bookAndCollectionMemberFeedDataList = new ArrayList<CollectionBean>();
                 while (rs.next()) {
                     collectionBean = new CollectionBean();
                     collectionBean.setIsbn(rs.getString("isbn"));

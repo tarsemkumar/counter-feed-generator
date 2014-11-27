@@ -5,9 +5,10 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
-import java.util.ResourceBundle;
 
-import com.google.inject.Injector;
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
+import com.nature.components.service.resources.IResourceLookUp;
 import com.nature.feeds.bean.CollectionBean;
 import com.nature.feeds.bean.ResultsBean;
 import com.nature.feeds.service.BookAndCollectionMemberFeedDataService;
@@ -17,81 +18,81 @@ import com.nature.feeds.service.GenerateBookFeedService;
 import com.nature.feeds.service.GenerateCollectionFeedService;
 import com.nature.feeds.service.GenerateCollectionMemberFeedService;
 import com.nature.feeds.service.UploadFeedService;
-import com.util.Constants;
+import com.util.FeedsLogger;
 
 public class FeedGenerator {
 
-    CollectionFeedDataService collectionFeedDataService;
-    GenerateCollectionFeedService generateCollectionFeedService;
-    BookAndCollectionMemberFeedDataService bookAndCollectionMemberFeedDataService;
-    List<CollectionBean> collectionFeedDataList = new ArrayList<CollectionBean>();
-    ResourceBundle messages = ResourceBundle.getBundle("ApplicationResources");
-    Injector injector = null;
-    ResultsBean resultsBean = new ResultsBean();
-    GenerateBookFeedService generateBookFeedService = null;
-    GenerateCollectionMemberFeedService generateCollectionMemberFeedService = null;
-    UploadFeedService uploadFeedService = null;
-    EmailNotificationService emailNotificationService = null;
+    private final CollectionFeedDataService collectionFeedDataService;
+    private final GenerateCollectionFeedService generateCollectionFeedService;
+    private final BookAndCollectionMemberFeedDataService bookAndCollectionMemberFeedDataService;
+    private List<CollectionBean> collectionFeedDataList;
+    private ResultsBean resultsBean;
+    private final GenerateBookFeedService generateBookFeedService;
+    private final GenerateCollectionMemberFeedService generateCollectionMemberFeedService;
+    private final UploadFeedService uploadFeedService;
+    private final EmailNotificationService emailNotificationService;
+    private final IResourceLookUp resourceLookUp;
 
-    public FeedGenerator(Injector injector) {
-        this.injector = injector;
-        this.collectionFeedDataService = injector.getInstance(CollectionFeedDataService.class);
-        this.generateCollectionFeedService = injector.getInstance(GenerateCollectionFeedService.class);
-        this.bookAndCollectionMemberFeedDataService = injector
-                .getInstance(BookAndCollectionMemberFeedDataService.class);
-        this.generateBookFeedService = injector.getInstance(GenerateBookFeedService.class);
-        this.generateCollectionMemberFeedService = injector.getInstance(GenerateCollectionMemberFeedService.class);
-        this.uploadFeedService = injector.getInstance(UploadFeedService.class);
-        this.emailNotificationService = injector.getInstance(EmailNotificationService.class);
+    @Inject
+    public FeedGenerator(CollectionFeedDataService collectionFeedDataService,
+            GenerateCollectionFeedService generateCollectionFeedService,
+            BookAndCollectionMemberFeedDataService bookAndCollectionMemberFeedDataService,
+            GenerateBookFeedService generateBookFeedService,
+            GenerateCollectionMemberFeedService generateCollectionMemberFeedService,
+            UploadFeedService uploadFeedService, EmailNotificationService emailNotificationService,
+            @Named("lib_resource_lookup") IResourceLookUp resourceLookUp) {
+        this.collectionFeedDataService = collectionFeedDataService;
+        this.generateCollectionFeedService = generateCollectionFeedService;
+        this.bookAndCollectionMemberFeedDataService = bookAndCollectionMemberFeedDataService;
+        this.generateBookFeedService = generateBookFeedService;
+        this.generateCollectionMemberFeedService = generateCollectionMemberFeedService;
+        this.uploadFeedService = uploadFeedService;
+        this.emailNotificationService = emailNotificationService;
+        this.resourceLookUp = resourceLookUp;
     }
 
     /* This method will use to get data for all three feeds */
 
     public void fetchFeedData() {
 
-        Constants.INFO.info("**** Feed generation application has been started. ****");
+        FeedsLogger.INFO.info("**** Feed generation application has been started. ****");
         try {
-            Constants.INFO.info("\n**** Phase 1:- Fetching feed data has been started. ****");
+            FeedsLogger.INFO.info("\n**** Phase 1:- Fetching feed data has been started. ****");
             collectionFeedDataList = collectionFeedDataService.getCollectionFeedData();
-            resultsBean = bookAndCollectionMemberFeedDataService.getBookAndCollectionMemberFeedData(injector);
-            Constants.INFO.info("\n**** Phase 1:- Fetching feed data has been completed. ****");
+            resultsBean = bookAndCollectionMemberFeedDataService.getBookAndCollectionMemberFeedData();
+            FeedsLogger.INFO.info("\n**** Phase 1:- Fetching feed data has been completed. ****");
             generateFeed();
-        } catch (Exception e) {
-            Constants.ERROR.error("Exception during fetching feed data.\n" + e);
-            emailNotification(messages.getString("feed.generation.failure.mail.to"),
-                    messages.getString("feed.generation.failure.mail.subject"),
-                    messages.getString("feed.generation.failure.mail.body"));
+        } catch (Exception exception) {
+            FeedsLogger.ERROR.error(exception);
+            try {
+                emailNotificationWhenFeedsDonotGenerate();
+            } catch (Exception exception_email) {
+                FeedsLogger.ERROR.error(exception_email);
+            }
         }
     }
 
     /* This method will use to generate all three feeds */
 
-    private void generateFeed() {
-        try {
-            Constants.INFO.info("\n**** Phase 2:- Feed generation has been started. ****");
-            String currentDateInYYYYMMDDFormat = getDateInYYYYMMDDFormat();
-            String collectionFeedName = messages.getString("collection") + currentDateInYYYYMMDDFormat
-                    + messages.getString("excel.extension");
-            generateCollectionFeedService.generateCollectionFeed(collectionFeedName,
-                    messages.getString("file.location"), collectionFeedDataList);
-            String bookFeedName = messages.getString("book") + currentDateInYYYYMMDDFormat
-                    + messages.getString("excel.extension");
-            Map<String, String> groupCodes = generateBookFeedService.getCollectionGroupMap();
-            generateBookFeedService.generateMpsBookFeed(bookFeedName, messages.getString("file.location"), resultsBean,
-                    groupCodes);
-            String collectionMemberFeedName = messages.getString("collection.member") + currentDateInYYYYMMDDFormat
-                    + messages.getString("excel.extension");
-            generateCollectionMemberFeedService.generateCollctionMemberFeed(collectionMemberFeedName,
-                    messages.getString("file.location"), resultsBean);
+    private void generateFeed() throws Exception {
+        FeedsLogger.INFO.info("\n**** Phase 2:- Feed generation has been started. ****");
+        String currentDateInYYYYMMDDFormat = getDateInYYYYMMDDFormat();
+        String collectionFeedName = resourceLookUp.getResource("collection") + currentDateInYYYYMMDDFormat
+                + resourceLookUp.getResource("excel.extension");
+        generateCollectionFeedService.generateCollectionFeed(collectionFeedName,
+                resourceLookUp.getResource("file.location"), collectionFeedDataList);
+        String bookFeedName = resourceLookUp.getResource("book") + currentDateInYYYYMMDDFormat
+                + resourceLookUp.getResource("excel.extension");
+        Map<String, String> groupCodes = generateBookFeedService.getCollectionGroupMap();
+        generateBookFeedService.generateMpsBookFeed(bookFeedName, resourceLookUp.getResource("file.location"),
+                resultsBean, groupCodes);
+        String collectionMemberFeedName = resourceLookUp.getResource("collection.member") + currentDateInYYYYMMDDFormat
+                + resourceLookUp.getResource("excel.extension");
+        generateCollectionMemberFeedService.generateCollctionMemberFeed(collectionMemberFeedName,
+                resourceLookUp.getResource("file.location"), resultsBean);
 
-            Constants.INFO.info("\n**** Phase 2:- Feed generation has been completed. ****");
-            uploadFeed(getTodaysFeedNamesList(collectionFeedName, bookFeedName, collectionMemberFeedName));
-        } catch (Exception e) {
-            Constants.ERROR.error("Exception during generating feeds.\n" + e);
-            emailNotification(messages.getString("feed.generation.failure.mail.to"),
-                    messages.getString("feed.generation.failure.mail.subject"),
-                    messages.getString("feed.generation.failure.mail.body"));
-        }
+        FeedsLogger.INFO.info("\n**** Phase 2:- Feed generation has been completed. ****");
+        uploadFeed(getTodaysFeedNamesList(collectionFeedName, bookFeedName, collectionMemberFeedName));
     }
 
     /* This method will use to get todaysFeedNameList */
@@ -112,62 +113,58 @@ public class FeedGenerator {
     private ArrayList<String> getYesterdaysFeedNameList() throws Exception {
         String yesterdayDateInYYYYMMDDFormat = getYesterdayDateInYYYYMMDDFormat();
         ArrayList<String> yesterdaysFeedNameList = new ArrayList<String>();
-        yesterdaysFeedNameList.add(messages.getString("collection") + yesterdayDateInYYYYMMDDFormat
-                + messages.getString("excel.extension"));
-        yesterdaysFeedNameList.add(messages.getString("book") + yesterdayDateInYYYYMMDDFormat
-                + messages.getString("excel.extension"));
-        yesterdaysFeedNameList.add(messages.getString("collection.member") + yesterdayDateInYYYYMMDDFormat
-                + messages.getString("excel.extension"));
+        yesterdaysFeedNameList.add(resourceLookUp.getResource("collection") + yesterdayDateInYYYYMMDDFormat
+                + resourceLookUp.getResource("excel.extension"));
+        yesterdaysFeedNameList.add(resourceLookUp.getResource("book") + yesterdayDateInYYYYMMDDFormat
+                + resourceLookUp.getResource("excel.extension"));
+        yesterdaysFeedNameList.add(resourceLookUp.getResource("collection.member") + yesterdayDateInYYYYMMDDFormat
+                + resourceLookUp.getResource("excel.extension"));
         yesterdaysFeedNameList.trimToSize();
         return yesterdaysFeedNameList;
     }
 
     /* This method will use to upload all three feeds on FTP location */
 
-    private void uploadFeed(ArrayList<String> todaysFeedName) {
-        try {
-            Constants.INFO.info("\n**** Phase 3:- Feed uploading has been started. ****");
-            Boolean feedUploadStatus = Boolean.FALSE;
-            feedUploadStatus = uploadFeedService.uploadFeedsOnFTPLocation(todaysFeedName, getYesterdaysFeedNameList());
-            if (feedUploadStatus == Boolean.FALSE) {
-                emailNotification(messages.getString("feed.generation.failure.mail.to"),
-                        messages.getString("feed.generation.failure.mail.subject"),
-                        messages.getString("feed.generation.failure.mail.body"));
-            } else {
-                Constants.INFO.info("\n**** Phase 3:- Feed uploading has been completed. ****");
-                emailNotification(messages.getString("mail.to"), messages.getString("mail.subject"),
-                        messages.getString("mail.body"));
-            }
-
-        } catch (Exception e) {
-            Constants.ERROR.error("Exception during uploading feeds.\n" + e);
-            emailNotification(messages.getString("feed.generation.failure.mail.to"),
-                    messages.getString("feed.generation.failure.mail.subject"),
-                    messages.getString("feed.generation.failure.mail.body"));
+    private void uploadFeed(ArrayList<String> todaysFeedName) throws Exception {
+        FeedsLogger.INFO.info("\n**** Phase 3:- Feed uploading has been started. ****");
+        Boolean feedUploadStatus = Boolean.FALSE;
+        feedUploadStatus = uploadFeedService.feedsUploadOperation(todaysFeedName, getYesterdaysFeedNameList());
+        if (feedUploadStatus == Boolean.FALSE) {
+            emailNotificationWhenFeedsDonotGenerate();
+        } else {
+            FeedsLogger.INFO.info("\n**** Phase 3:- Feed uploading has been completed. ****");
+            emailNotificationWhenFeedsGenerate();
         }
     }
 
-    /* This method will use to send email notification */
+    /* This method will use to send email notification when feeds generate successfully. */
 
-    private void emailNotification(String to, String subject, String body) {
-        try {
-            Constants.INFO.info("\n**** Phase 4:- E-mail notification has been started. ****");
-            emailNotificationService.sendEmailNotification(to, subject, body);
-            Constants.INFO.info("\n**** Phase 4:- E-mail notification has been completed. ****");
-            Constants.INFO.info("\n**** Feed generation application has been completed. ****\n\n\n");
+    private void emailNotificationWhenFeedsGenerate() throws Exception {
+        FeedsLogger.INFO.info("\n**** Phase 4:- E-mail notification has been started. ****");
+        emailNotificationService.sendEmailNotification(resourceLookUp.getResource("mail.to"),
+                resourceLookUp.getResource("mail.subject"), resourceLookUp.getResource("mail.body"));
+        FeedsLogger.INFO.info("\n**** Phase 4:- E-mail notification has been completed. ****");
+        FeedsLogger.INFO.info("\n**** Feed generation application has been completed. ****\n\n\n");
+    }
 
-        } catch (Exception e) {
-            Constants.ERROR.error("Exception during sending email notification.\n" + e);
-        }
+    /* This method will use to send email notification when feeds does not generate successfully. */
+
+    private void emailNotificationWhenFeedsDonotGenerate() throws Exception {
+        FeedsLogger.INFO.info("\n**** Phase 4:- E-mail notification has been started. ****");
+        emailNotificationService.sendEmailNotification(resourceLookUp.getResource("feed.generation.failure.mail.to"),
+                resourceLookUp.getResource("feed.generation.failure.mail.subject"),
+                resourceLookUp.getResource("feed.generation.failure.mail.body"));
+        FeedsLogger.INFO.info("\n**** Phase 4:- E-mail notification has been completed. ****");
+        FeedsLogger.INFO.info("\n**** Feed generation application has been completed. ****\n\n\n");
     }
 
     private String getDateInYYYYMMDDFormat() throws Exception {
-        SimpleDateFormat sdf = new SimpleDateFormat(messages.getString("date.format"));
+        SimpleDateFormat sdf = new SimpleDateFormat(resourceLookUp.getResource("date.format"));
         return sdf.format(Calendar.getInstance().getTime());
     }
 
     private String getYesterdayDateInYYYYMMDDFormat() throws Exception {
-        SimpleDateFormat sdf = new SimpleDateFormat(messages.getString("date.format"));
+        SimpleDateFormat sdf = new SimpleDateFormat(resourceLookUp.getResource("date.format"));
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.DATE, -1);
         return sdf.format(cal.getTime());
