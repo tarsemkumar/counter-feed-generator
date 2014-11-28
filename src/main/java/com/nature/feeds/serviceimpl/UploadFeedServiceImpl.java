@@ -38,10 +38,8 @@ public class UploadFeedServiceImpl implements UploadFeedService {
             ftpClient = new FTPClient();
             feedsUploadOperationStepsStatus = setFtpConnection(todaysFeedName, yesterdaysFeedNames);
             if (feedsUploadOperationStepsStatus == Boolean.TRUE) {
-                feedsUploadOperationStepsStatus = uploadTodaysFeedsOnFTPLocation(todaysFeedName);
-            }
-            if (feedsUploadOperationStepsStatus == Boolean.TRUE) {
-                feedsUploadOperationStepsStatus = deleteYesterdaysFeedsFromFTPLocation(yesterdaysFeedNames);
+                uploadTodaysFeedsOnFTPLocation(todaysFeedName);
+                deleteYesterdaysFeedsFromFTPLocation(yesterdaysFeedNames);
                 deleteFeedsFromLocalLocation();
             }
         } finally {
@@ -78,13 +76,12 @@ public class UploadFeedServiceImpl implements UploadFeedService {
 
     /* This method will use to upload current feeds in FTP location */
 
-    private Boolean uploadTodaysFeedsOnFTPLocation(ArrayList<String> todaysFeedNames) throws FileNotFoundException,
+    private void uploadTodaysFeedsOnFTPLocation(ArrayList<String> todaysFeedNames) throws FileNotFoundException,
             IOException, Exception {
 
         File localFile = null;
         String remoteFile = null;
         InputStream inputStream = null;
-        Boolean feedUploadStatus = Boolean.FALSE;
 
         try {
             if ((todaysFeedNames != null) && (todaysFeedNames.size() > 0)) {
@@ -102,15 +99,7 @@ public class UploadFeedServiceImpl implements UploadFeedService {
                     inputStream = new FileInputStream(localFile);
                     boolean done = ftpClient.storeFile(remoteFile, inputStream);
                     inputStream.close();
-                    if (done) {
-                        FeedsLogger.INFO.info("\n**** " + todaysFeedNames.get(index) + " file has been uploaded. ****");
-                        feedUploadStatus = Boolean.TRUE;
-                    } else {
-                        FeedsLogger.INFO.info("\n**** " + todaysFeedNames.get(index)
-                                + " file is not uploaded successfully. ****");
-                        feedUploadStatus = Boolean.FALSE;
-                        break;
-                    }
+                    FeedsLogger.INFO.info("\n**** " + todaysFeedNames.get(index) + " file has been uploaded. ****");
                 }
             }
         } finally {
@@ -118,38 +107,24 @@ public class UploadFeedServiceImpl implements UploadFeedService {
                 inputStream.close();
             }
         }
-        return feedUploadStatus;
     }
 
     /* This method will use to delete yesterday's feeds from FTP location */
 
-    private Boolean deleteYesterdaysFeedsFromFTPLocation(ArrayList<String> yesterdaysFeedNames) throws Exception {
-
-        Boolean feedDeletionStatus = Boolean.FALSE;
+    private void deleteYesterdaysFeedsFromFTPLocation(ArrayList<String> yesterdaysFeedNames) throws Exception {
         if ((yesterdaysFeedNames != null) && (yesterdaysFeedNames.size() > 0)) {
             for (int index = 0; index < yesterdaysFeedNames.size(); index++) {
                 Boolean done = ftpClient.deleteFile(resourceLookUp.getResource("ftp.remote.path")
                         + yesterdaysFeedNames.get(index));
-                if (done) {
-                    feedDeletionStatus = Boolean.TRUE;
-                    FeedsLogger.INFO.info("\n**** " + yesterdaysFeedNames.get(index) + " file has been deleted. ****");
-                } else {
-                    feedDeletionStatus = Boolean.FALSE;
-                    FeedsLogger.INFO.info("\n**** " + yesterdaysFeedNames.get(index)
-                            + " file is not deleted successfully. ****");
-                    break;
-                }
+
             }
         }
-        return feedDeletionStatus;
     }
 
     /* This method will use to delete feeds from local location */
 
     private void deleteFeedsFromLocalLocation() throws IOException {
-        FeedsLogger.INFO.info("\n**** Feeds deletion from local location has been started. ****");
         FileUtils.cleanDirectory(new File(resourceLookUp.getResource("file.location")
                 + resourceLookUp.getResource("file.location.seperator")));
-        FeedsLogger.INFO.info("\n***  Feeds deletion from local location has been completed. ****");
     }
 }
