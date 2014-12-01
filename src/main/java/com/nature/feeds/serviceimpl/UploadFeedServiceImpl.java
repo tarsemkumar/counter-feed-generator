@@ -15,7 +15,6 @@ import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.nature.components.service.resources.IResourceLookUp;
 import com.nature.feeds.service.UploadFeedService;
-import com.util.FeedsLogger;
 
 public class UploadFeedServiceImpl implements UploadFeedService {
 
@@ -57,21 +56,9 @@ public class UploadFeedServiceImpl implements UploadFeedService {
     private Boolean setFtpConnection(ArrayList<String> todaysFeedsName, ArrayList<String> yesterdaysFeedNames)
             throws Exception {
 
-        Boolean ftpConnectionStatus = Boolean.FALSE;
-
         ftpClient.connect(resourceLookUp.getResource("ftp.host"),
                 Integer.parseInt(resourceLookUp.getResource("ftp.port")));
-        ftpClient.getReplyCode();
-        boolean success = ftpClient.login(resourceLookUp.getResource("ftp.username"),
-                resourceLookUp.getResource("ftp.password"));
-        if (!success) {
-            FeedsLogger.INFO.info("\n**** FTP login operation failed. ****");
-        } else {
-            ftpConnectionStatus = Boolean.TRUE;
-            FeedsLogger.INFO.info("\n**** FTP connection has been created. ****");
-        }
-
-        return ftpConnectionStatus;
+        return ftpClient.login(resourceLookUp.getResource("ftp.username"), resourceLookUp.getResource("ftp.password"));
     }
 
     /* This method will use to upload current feeds in FTP location */
@@ -97,9 +84,8 @@ public class UploadFeedServiceImpl implements UploadFeedService {
                             + resourceLookUp.getResource("file.location.seperator") + todaysFeedNames.get(index));
                     remoteFile = resourceLookUp.getResource("ftp.remote.path") + todaysFeedNames.get(index);
                     inputStream = new FileInputStream(localFile);
-                    boolean done = ftpClient.storeFile(remoteFile, inputStream);
+                    ftpClient.storeFile(remoteFile, inputStream);
                     inputStream.close();
-                    FeedsLogger.INFO.info("\n**** " + todaysFeedNames.get(index) + " file has been uploaded. ****");
                 }
             }
         } finally {
@@ -114,8 +100,7 @@ public class UploadFeedServiceImpl implements UploadFeedService {
     private void deleteYesterdaysFeedsFromFTPLocation(ArrayList<String> yesterdaysFeedNames) throws Exception {
         if ((yesterdaysFeedNames != null) && (yesterdaysFeedNames.size() > 0)) {
             for (int index = 0; index < yesterdaysFeedNames.size(); index++) {
-                Boolean done = ftpClient.deleteFile(resourceLookUp.getResource("ftp.remote.path")
-                        + yesterdaysFeedNames.get(index));
+                ftpClient.deleteFile(resourceLookUp.getResource("ftp.remote.path") + yesterdaysFeedNames.get(index));
 
             }
         }

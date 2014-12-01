@@ -4,33 +4,18 @@
 <log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/"
 	debug="false">
 
-	<appender name="FEED_GENERATOR_ERROR_APPENDER" class="org.apache.log4j.rolling.RollingFileAppender">
+	<appender name="FEED_GENERATOR_APPENDER" class="org.apache.log4j.rolling.RollingFileAppender">
 		<rollingPolicy class="org.apache.log4j.rolling.TimeBasedRollingPolicy">
-			<param name="FileNamePattern" value="log/feed_generator_error_%d.log" />
+			<param name="FileNamePattern" value="log/feed_generator_%d.log" />
 		</rollingPolicy>
 		<layout class="org.apache.log4j.PatternLayout">
-			<param name="ConversionPattern" value="%d %-5p [%t] %C{2} (%F:%L) - %m%n" />
+			<param name="ConversionPattern" value="%d %-5p [%t] %C (%F:%L) - %m%n" />
 		</layout>
 	</appender>
 	
-	<appender name="FEED_GENERATOR_INFO_APPENDER" class="org.apache.log4j.rolling.RollingFileAppender">
-		<rollingPolicy class="org.apache.log4j.rolling.TimeBasedRollingPolicy">
-			<param name="FileNamePattern" value="log/feed_generator_info_%d.log" />
-		</rollingPolicy>
-		<layout class="org.apache.log4j.PatternLayout">
-			<param name="ConversionPattern" value="%m%n" />
-		</layout>
-	</appender>
-	
-	<category name="feed.generator.error" additivity="false">
-		<priority value="ERROR" />
-		<appender-ref ref="FEED_GENERATOR_ERROR_APPENDER" />
-	</category>
-	
-	<category name="feed.generator.info" additivity="false">
+	<category name="com.nature.feeds" additivity="false">
 		<priority value="INFO" />
-		<appender-ref ref="FEED_GENERATOR_INFO_APPENDER" />
+		<appender-ref ref="FEED_GENERATOR_APPENDER" />
 	</category>
-	
-	
+		
 </log4j:configuration>

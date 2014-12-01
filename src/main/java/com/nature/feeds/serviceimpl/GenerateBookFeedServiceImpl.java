@@ -29,7 +29,6 @@ import com.nature.components.service.resources.IResourceLookUp;
 import com.nature.feeds.bean.ItemBean;
 import com.nature.feeds.bean.ResultsBean;
 import com.nature.feeds.service.GenerateBookFeedService;
-import com.util.FeedsLogger;
 
 public class GenerateBookFeedServiceImpl implements GenerateBookFeedService {
 
@@ -61,7 +60,6 @@ public class GenerateBookFeedServiceImpl implements GenerateBookFeedService {
             createLabel(excelSheet, getBookFeedsHeaderList());
             createBookContent(excelSheet, feedDataBeans, groupCodes);
             workbook.write();
-            FeedsLogger.INFO.info("\n**** Book Feed has been generated. ****");
         } finally {
             if (workbook != null) {
                 workbook.close();

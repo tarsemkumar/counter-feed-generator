@@ -2,6 +2,8 @@ package com.nature.feeds.guice;
 
 import java.io.IOException;
 
+import org.apache.log4j.Logger;
+
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
@@ -34,9 +36,10 @@ import com.nature.marklogic.Connector;
 import com.nature.marklogic.ConnectorImpl;
 import com.nature.marklogic.ContentSourceProvider;
 import com.nature.marklogic.QueryBuilder;
-import com.util.FeedsLogger;
 
 public class FeedModule implements Module {
+
+    private static Logger logger = Logger.getLogger(UploadFeedServiceImpl.class);
 
     @Override
     public void configure(Binder binder) {
@@ -62,7 +65,7 @@ public class FeedModule implements Module {
         try {
             return new ResourceLookUp("ApplicationResources");
         } catch (IOException e) {
-            FeedsLogger.ERROR.error("Exception reading properties", e);
+            logger.info("Exception reading properties", e);
         }
         return null;
     }

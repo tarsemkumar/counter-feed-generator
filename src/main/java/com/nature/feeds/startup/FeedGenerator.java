@@ -6,6 +6,8 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.nature.components.service.resources.IResourceLookUp;
@@ -18,7 +20,6 @@ import com.nature.feeds.service.GenerateBookFeedService;
 import com.nature.feeds.service.GenerateCollectionFeedService;
 import com.nature.feeds.service.GenerateCollectionMemberFeedService;
 import com.nature.feeds.service.UploadFeedService;
-import com.util.FeedsLogger;
 
 public class FeedGenerator {
 
@@ -32,6 +33,7 @@ public class FeedGenerator {
     private final UploadFeedService uploadFeedService;
     private final EmailNotificationService emailNotificationService;
     private final IResourceLookUp resourceLookUp;
+    private static Logger logger = Logger.getLogger(FeedGenerator.class);
 
     @Inject
     public FeedGenerator(CollectionFeedDataService collectionFeedDataService,
@@ -55,19 +57,19 @@ public class FeedGenerator {
 
     public void fetchFeedData() {
 
-        FeedsLogger.INFO.info("**** Feed generation application has been started. ****");
+        logger.info("**** Feed generation application has been started. ****");
         try {
-            FeedsLogger.INFO.info("\n**** Phase 1:- Fetching feed data has been started. ****");
+            logger.info("**** Phase 1:- Fetching feed data has been started. ****");
             collectionFeedDataList = collectionFeedDataService.getCollectionFeedData();
             resultsBean = bookAndCollectionMemberFeedDataService.getBookAndCollectionMemberFeedData();
-            FeedsLogger.INFO.info("\n**** Phase 1:- Fetching feed data has been completed. ****");
+            logger.info("**** Phase 1:- Fetching feed data has been completed. ****");
             generateFeed();
         } catch (Exception exception) {
-            FeedsLogger.ERROR.error(exception);
+            logger.info(exception);
             try {
                 emailNotificationWhenFeedsDonotGenerate();
             } catch (Exception exception_email) {
-                FeedsLogger.ERROR.error(exception_email);
+                logger.info(exception_email);
             }
         }
     }
@@ -75,7 +77,7 @@ public class FeedGenerator {
     /* This method will use to generate all three feeds */
 
     private void generateFeed() throws Exception {
-        FeedsLogger.INFO.info("\n**** Phase 2:- Feed generation has been started. ****");
+        logger.info("**** Phase 2:- Feed generation has been started. ****");
         String currentDateInYYYYMMDDFormat = getDateInYYYYMMDDFormat();
         String collectionFeedName = resourceLookUp.getResource("collection") + currentDateInYYYYMMDDFormat
                 + resourceLookUp.getResource("excel.extension");
@@ -91,7 +93,7 @@ public class FeedGenerator {
         generateCollectionMemberFeedService.generateCollctionMemberFeed(collectionMemberFeedName,
                 resourceLookUp.getResource("file.location"), resultsBean);
 
-        FeedsLogger.INFO.info("\n**** Phase 2:- Feed generation has been completed. ****");
+        logger.info("**** Phase 2:- Feed generation has been completed. ****");
         uploadFeed(getTodaysFeedNamesList(collectionFeedName, bookFeedName, collectionMemberFeedName));
     }
 
@@ -126,13 +128,13 @@ public class FeedGenerator {
     /* This method will use to upload all three feeds on FTP location */
 
     private void uploadFeed(ArrayList<String> todaysFeedName) throws Exception {
-        FeedsLogger.INFO.info("\n**** Phase 3:- Feed uploading has been started. ****");
+        logger.info("**** Phase 3:- Feed uploading has been started. ****");
         Boolean feedUploadStatus = Boolean.FALSE;
         feedUploadStatus = uploadFeedService.feedsUploadOperation(todaysFeedName, getYesterdaysFeedNameList());
         if (feedUploadStatus == Boolean.FALSE) {
             emailNotificationWhenFeedsDonotGenerate();
         } else {
-            FeedsLogger.INFO.info("\n**** Phase 3:- Feed uploading has been completed. ****");
+            logger.info("**** Phase 3:- Feed uploading has been completed. ****");
             emailNotificationWhenFeedsGenerate();
         }
     }
@@ -140,22 +142,22 @@ public class FeedGenerator {
     /* This method will use to send email notification when feeds generate successfully. */
 
     private void emailNotificationWhenFeedsGenerate() throws Exception {
-        FeedsLogger.INFO.info("\n**** Phase 4:- E-mail notification has been started. ****");
+        logger.info("**** Phase 4:- E-mail notification has been started. ****");
         emailNotificationService.sendEmailNotification(resourceLookUp.getResource("mail.to"),
                 resourceLookUp.getResource("mail.subject"), resourceLookUp.getResource("mail.body"));
-        FeedsLogger.INFO.info("\n**** Phase 4:- E-mail notification has been completed. ****");
-        FeedsLogger.INFO.info("\n**** Feed generation application has been completed. ****\n\n\n");
+        logger.info("**** Phase 4:- E-mail notification has been completed. ****");
+        logger.info("**** Feed generation application has been completed. ****\n\n\n");
     }
 
     /* This method will use to send email notification when feeds does not generate successfully. */
 
     private void emailNotificationWhenFeedsDonotGenerate() throws Exception {
-        FeedsLogger.INFO.info("\n**** Phase 4:- E-mail notification has been started. ****");
+        logger.info("**** Phase 4:- E-mail notification has been started. ****");
         emailNotificationService.sendEmailNotification(resourceLookUp.getResource("feed.generation.failure.mail.to"),
                 resourceLookUp.getResource("feed.generation.failure.mail.subject"),
                 resourceLookUp.getResource("feed.generation.failure.mail.body"));
-        FeedsLogger.INFO.info("\n**** Phase 4:- E-mail notification has been completed. ****");
-        FeedsLogger.INFO.info("\n**** Feed generation application has been completed. ****\n\n\n");
+        logger.info("**** Phase 4:- E-mail notification has been completed. ****");
+        logger.info("**** Feed generation application has been completed. ****\n\n\n");
     }
 
     private String getDateInYYYYMMDDFormat() throws Exception {

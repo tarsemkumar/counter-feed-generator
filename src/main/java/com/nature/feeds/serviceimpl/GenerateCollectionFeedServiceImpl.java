@@ -21,7 +21,6 @@ import com.google.inject.name.Named;
 import com.nature.components.service.resources.IResourceLookUp;
 import com.nature.feeds.bean.CollectionBean;
 import com.nature.feeds.service.GenerateCollectionFeedService;
-import com.util.FeedsLogger;
 
 public class GenerateCollectionFeedServiceImpl implements GenerateCollectionFeedService {
 
@@ -54,7 +53,6 @@ public class GenerateCollectionFeedServiceImpl implements GenerateCollectionFeed
             createLabel(excelSheet, getCollectionFeedsHeaderList());
             createCollectionContent(excelSheet, collectionFeedDataList);
             workbook.write();
-            FeedsLogger.INFO.info("\n**** Collection Feed has been generated. ****");
         } finally {
             if (workbook != null) {
                 workbook.close();

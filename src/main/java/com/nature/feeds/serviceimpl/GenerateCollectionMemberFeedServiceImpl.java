@@ -22,7 +22,6 @@ import com.nature.components.service.resources.IResourceLookUp;
 import com.nature.feeds.bean.ItemBean;
 import com.nature.feeds.bean.ResultsBean;
 import com.nature.feeds.service.GenerateCollectionMemberFeedService;
-import com.util.FeedsLogger;
 
 public class GenerateCollectionMemberFeedServiceImpl implements GenerateCollectionMemberFeedService {
 
@@ -50,7 +49,7 @@ public class GenerateCollectionMemberFeedServiceImpl implements GenerateCollecti
             createLabel(excelSheet, getCollectionMemberFeedsHeaderList());
             createCollectionMemberContent(excelSheet, getNonByoTitleList(beans));
             workbook.write();
-            FeedsLogger.INFO.info("\n**** Collection Member feed has been generated. ****");
+
         } finally {
             if (workbook != null) {
                 workbook.close();
