@@ -1,6 +1,8 @@
 package com.nature.feeds.serviceimpl;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -8,21 +10,10 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import jxl.Workbook;
-import jxl.WorkbookSettings;
-import jxl.write.Label;
-import jxl.write.Number;
-import jxl.write.WritableCellFormat;
-import jxl.write.WritableFont;
-import jxl.write.WritableSheet;
-import jxl.write.WritableWorkbook;
-import jxl.write.WriteException;
-import jxl.write.biff.RowsExceededException;
-
+import com.csvreader.CsvWriter;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.nature.components.service.resources.IResourceLookUp;
@@ -32,8 +23,6 @@ import com.nature.feeds.service.GenerateBookFeedService;
 
 public class GenerateBookFeedServiceImpl implements GenerateBookFeedService {
 
-    private WritableCellFormat arialBoldUnderline;
-    private WritableCellFormat arial;
     private Connection conn;
     private PreparedStatement stmt;
     private ResultSet rs;
@@ -47,49 +36,26 @@ public class GenerateBookFeedServiceImpl implements GenerateBookFeedService {
     /* This method will use to generate book feed. */
     @Override
     public void generateMpsBookFeed(String fileName, String filePath, ResultsBean feedDataBeans,
-            Map<String, String> groupCodes) throws Exception {
+            Map<String, String> groupCodes) throws IOException, Exception {
 
         File file = new File(filePath + resourceLookUp.getResource("file.location.seperator") + fileName);
-        WorkbookSettings wbSettings = new WorkbookSettings();
-        wbSettings.setLocale(new Locale("en", "EN"));
-        WritableWorkbook workbook = null;
+        CsvWriter csvFile = new CsvWriter(new FileWriter(file, true), ',');
         try {
-            workbook = Workbook.createWorkbook(file, wbSettings);
-            workbook.createSheet(fileName, 0);
-            WritableSheet excelSheet = workbook.getSheet(0);
-            createLabel(excelSheet, getBookFeedsHeaderList());
-            createBookContent(excelSheet, feedDataBeans, groupCodes);
-            workbook.write();
+            createLabel(csvFile, getBookFeedsHeaderList());
+            createBookContent(csvFile, feedDataBeans, groupCodes);
         } finally {
-            if (workbook != null) {
-                workbook.close();
+            if (csvFile != null) {
+                csvFile.flush();
+                csvFile.close();
             }
         }
-
     }
 
-    private void createLabel(WritableSheet sheet, List<String> headerList) throws WriteException, Exception {
-        // Define a font type as arial with pt 10
-        WritableFont arial10pt = new WritableFont(WritableFont.ARIAL, 10);
-        // Define the cell format
-        arial = new WritableCellFormat(arial10pt);
-
-        // Create a bold font for header
-        WritableFont areal10ptBoldUnderline = new WritableFont(WritableFont.ARIAL, 10, WritableFont.BOLD);
-        arialBoldUnderline = new WritableCellFormat(areal10ptBoldUnderline);
-        // Automatically wrap the cells
-        arialBoldUnderline.setWrap(true);
-
-        // Write headers
+    private void createLabel(CsvWriter csvFile, List<String> headerList) throws IOException, Exception {
         for (int index = 0; index < headerList.size(); index++) {
-            addCaption(sheet, index, 0, headerList.get(index));
+            csvFile.write(headerList.get(index));
         }
-    }
-
-    private void addCaption(WritableSheet sheet, int column, int row, String s) throws WriteException, Exception {
-        Label label;
-        label = new Label(column, row, s, arialBoldUnderline);
-        sheet.addCell(label);
+        csvFile.endRecord();
     }
 
     private List<String> getBookFeedsHeaderList() throws Exception {
@@ -104,46 +70,24 @@ public class GenerateBookFeedServiceImpl implements GenerateBookFeedService {
         return headerList;
     }
 
-    private void createBookContent(WritableSheet sheet, ResultsBean beans, Map<String, String> groupCodes)
-            throws WriteException, RowsExceededException, Exception {
+    private void createBookContent(CsvWriter csvFile, ResultsBean beans, Map<String, String> groupCodes)
+            throws IOException, Exception {
 
         ItemBean bean;
-        int i = 0;
 
         if (beans != null) {
             for (int index = 0; index < beans.getItems().size(); index++) {
                 bean = beans.getItems().get(index);
-                sheet.setColumnView(0, 20);
-                addNumber(sheet, 0, index + 1, bean.getThirteenDigitIsbn());
-                sheet.setColumnView(1, 20);
-                addLabel(sheet, 1, index + 1, bean.getTitle());
-                sheet.setColumnView(2, 16);
-                addLabel(sheet, 2, index + 1,
-                        getGrouping(bean.getCollections().get(0).getCollectionWorkid(), groupCodes));
-                sheet.setColumnView(3, 20);
-                addLabel(sheet, 3, index + 1, resourceLookUp.getResource("palgrave.macmillan"));
-                sheet.setColumnView(4, 16);
-                addNumber(sheet, 4, index + 1, bean.getThirteenDigitIsbn());
-                sheet.setColumnView(5, 16);
-                addLabel(sheet, 5, index + 1, resourceLookUp.getResource("palgrave.connect"));
-                sheet.setColumnView(6, 20);
-                addLabel(sheet, 6, index + 1, bean.getDoi());
-                i = i + 1;
+                csvFile.write(bean.getThirteenDigitIsbn());
+                csvFile.write(bean.getTitle());
+                csvFile.write(getGrouping(bean.getCollections().get(0).getCollectionWorkid(), groupCodes));
+                csvFile.write(resourceLookUp.getResource("palgrave.macmillan"));
+                csvFile.write(bean.getThirteenDigitIsbn());
+                csvFile.write(resourceLookUp.getResource("palgrave.connect"));
+                csvFile.write(bean.getDoi());
+                csvFile.endRecord();
             }
         }
-    }
-
-    private void addLabel(WritableSheet sheet, int column, int row, String s) throws WriteException, Exception {
-        Label label;
-        label = new Label(column, row, s, arial);
-        sheet.addCell(label);
-    }
-
-    private void addNumber(WritableSheet sheet, int column, int row, String s) throws WriteException,
-            NumberFormatException, Exception {
-        Number number;
-        number = new Number(column, row, Double.parseDouble(s), arial);
-        sheet.addCell(number);
     }
 
     @Override

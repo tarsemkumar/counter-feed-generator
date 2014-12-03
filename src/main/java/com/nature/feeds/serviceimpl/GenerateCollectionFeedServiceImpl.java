@@ -1,21 +1,12 @@
 package com.nature.feeds.serviceimpl;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
-import jxl.Workbook;
-import jxl.WorkbookSettings;
-import jxl.write.Label;
-import jxl.write.Number;
-import jxl.write.WritableCellFormat;
-import jxl.write.WritableFont;
-import jxl.write.WritableSheet;
-import jxl.write.WritableWorkbook;
-import jxl.write.WriteException;
-import jxl.write.biff.RowsExceededException;
-
+import com.csvreader.CsvWriter;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.nature.components.service.resources.IResourceLookUp;
@@ -24,8 +15,6 @@ import com.nature.feeds.service.GenerateCollectionFeedService;
 
 public class GenerateCollectionFeedServiceImpl implements GenerateCollectionFeedService {
 
-    private WritableCellFormat arial;
-    private WritableCellFormat arialBoldUnderline;
     private final IResourceLookUp resourceLookUp;
 
     @Inject
@@ -36,47 +25,31 @@ public class GenerateCollectionFeedServiceImpl implements GenerateCollectionFeed
     /* This method will use to generate collection feed. */
     @Override
     public void generateCollectionFeed(String fileName, String filePath, List<CollectionBean> collectionFeedDataList)
-            throws Exception {
+            throws IOException, Exception {
 
         File directory = new File(filePath);
         if (directory.exists() == Boolean.FALSE) {
             directory.mkdir();
         }
         File file = new File(filePath + resourceLookUp.getResource("file.location.seperator") + fileName);
-        WorkbookSettings wbSettings = new WorkbookSettings();
-        wbSettings.setLocale(new Locale("en", "EN"));
-        WritableWorkbook workbook = null;
+        CsvWriter csvFile = new CsvWriter(new FileWriter(file, true), ',');
         try {
-            workbook = Workbook.createWorkbook(file, wbSettings);
-            workbook.createSheet(fileName, 0);
-            WritableSheet excelSheet = workbook.getSheet(0);
-            createLabel(excelSheet, getCollectionFeedsHeaderList());
-            createCollectionContent(excelSheet, collectionFeedDataList);
-            workbook.write();
+            createLabel(csvFile, getCollectionFeedsHeaderList());
+            createCollectionContent(csvFile, collectionFeedDataList);
         } finally {
-            if (workbook != null) {
-                workbook.close();
+            if (csvFile != null) {
+                csvFile.flush();
+                csvFile.close();
             }
         }
     }
 
-    private void createLabel(WritableSheet sheet, List<String> headerList) throws WriteException, Exception {
+    private void createLabel(CsvWriter csvFile, List<String> headerList) throws IOException, Exception {
 
-        // Define a font type as arial with pt 10
-        WritableFont arial10pt = new WritableFont(WritableFont.ARIAL, 10);
-        // Define the cell format
-        arial = new WritableCellFormat(arial10pt);
-
-        // Create a bold font for header
-        WritableFont areal10ptBoldUnderline = new WritableFont(WritableFont.ARIAL, 10, WritableFont.BOLD);
-        arialBoldUnderline = new WritableCellFormat(areal10ptBoldUnderline);
-        // Automatically wrap the cells
-        arialBoldUnderline.setWrap(false);
-
-        // Write headers
         for (int index = 0; index < headerList.size(); index++) {
-            addCaption(sheet, index, 0, headerList.get(index));
+            csvFile.write(headerList.get(index));
         }
+        csvFile.endRecord();
     }
 
     private List<String> getCollectionFeedsHeaderList() throws Exception {
@@ -90,44 +63,20 @@ public class GenerateCollectionFeedServiceImpl implements GenerateCollectionFeed
         return headerList;
     }
 
-    private void addCaption(WritableSheet sheet, int column, int row, String s) throws WriteException, Exception {
-        Label label;
-        label = new Label(column, row, s, arialBoldUnderline);
-        sheet.addCell(label);
-    }
-
-    private void createCollectionContent(WritableSheet sheet, List<CollectionBean> collectionFeedDataList)
-            throws WriteException, RowsExceededException, NumberFormatException, Exception {
+    private void createCollectionContent(CsvWriter csvFile, List<CollectionBean> collectionFeedDataList)
+            throws IOException, Exception {
         CollectionBean bean;
         if ((collectionFeedDataList != null) && (collectionFeedDataList.size() > 0)) {
             for (int index = 0; index < collectionFeedDataList.size(); index++) {
                 bean = collectionFeedDataList.get(index);
-                sheet.setColumnView(0, 20);
-                addNumber(sheet, 0, index + 1, bean.getIsbn());
-                sheet.setColumnView(1, 20);
-                addLabel(sheet, 1, index + 1, bean.getProductDesc());
-                sheet.setColumnView(2, 16);
-                addLabel(sheet, 2, index + 1, bean.getProductGroupDesc());
-                sheet.setColumnView(3, 20);
-                addLabel(sheet, 3, index + 1, resourceLookUp.getResource("palgrave.macmillan"));
-                sheet.setColumnView(4, 16);
-                addNumber(sheet, 4, index + 1, bean.getIsbn());
-                sheet.setColumnView(5, 16);
-                addLabel(sheet, 5, index + 1, resourceLookUp.getResource("palgrave.connect"));
+                csvFile.write(bean.getIsbn());
+                csvFile.write(bean.getProductDesc());
+                csvFile.write(bean.getProductGroupDesc());
+                csvFile.write(resourceLookUp.getResource("palgrave.macmillan"));
+                csvFile.write(bean.getIsbn());
+                csvFile.write(resourceLookUp.getResource("palgrave.connect"));
+                csvFile.endRecord();
             }
         }
-    }
-
-    private void addLabel(WritableSheet sheet, int column, int row, String s) throws WriteException, Exception {
-        Label label;
-        label = new Label(column, row, s, arial);
-        sheet.addCell(label);
-    }
-
-    private void addNumber(WritableSheet sheet, int column, int row, String s) throws WriteException,
-            NumberFormatException, Exception {
-        Number number;
-        number = new Number(column, row, Double.parseDouble(s), arial);
-        sheet.addCell(number);
     }
 }

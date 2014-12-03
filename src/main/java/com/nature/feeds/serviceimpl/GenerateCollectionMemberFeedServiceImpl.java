@@ -1,21 +1,12 @@
 package com.nature.feeds.serviceimpl;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
-import jxl.Workbook;
-import jxl.WorkbookSettings;
-import jxl.write.Label;
-import jxl.write.Number;
-import jxl.write.WritableCellFormat;
-import jxl.write.WritableFont;
-import jxl.write.WritableSheet;
-import jxl.write.WritableWorkbook;
-import jxl.write.WriteException;
-import jxl.write.biff.RowsExceededException;
-
+import com.csvreader.CsvWriter;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.nature.components.service.resources.IResourceLookUp;
@@ -25,8 +16,6 @@ import com.nature.feeds.service.GenerateCollectionMemberFeedService;
 
 public class GenerateCollectionMemberFeedServiceImpl implements GenerateCollectionMemberFeedService {
 
-    private WritableCellFormat arial;
-    private WritableCellFormat arialBoldUnderline;
     private final IResourceLookUp resourceLookUp;
 
     @Inject
@@ -37,22 +26,17 @@ public class GenerateCollectionMemberFeedServiceImpl implements GenerateCollecti
     /* This method will use to generate collection member feed. */
 
     @Override
-    public void generateCollctionMemberFeed(String fileName, String filePath, ResultsBean beans) throws Exception {
+    public void generateCollctionMemberFeed(String fileName, String filePath, ResultsBean beans) throws IOException,
+            Exception {
         File file = new File(filePath + resourceLookUp.getResource("file.location.seperator") + fileName);
-        WorkbookSettings wbSettings = new WorkbookSettings();
-        wbSettings.setLocale(new Locale("en", "EN"));
-        WritableWorkbook workbook = null;
+        CsvWriter csvFile = new CsvWriter(new FileWriter(file, true), ',');
         try {
-            workbook = Workbook.createWorkbook(file, wbSettings);
-            workbook.createSheet(fileName, 0);
-            WritableSheet excelSheet = workbook.getSheet(0);
-            createLabel(excelSheet, getCollectionMemberFeedsHeaderList());
-            createCollectionMemberContent(excelSheet, getNonByoTitleList(beans));
-            workbook.write();
-
+            createLabel(csvFile, getCollectionMemberFeedsHeaderList());
+            createCollectionMemberContent(csvFile, getNonByoTitleList(beans));
         } finally {
-            if (workbook != null) {
-                workbook.close();
+            if (csvFile != null) {
+                csvFile.flush();
+                csvFile.close();
             }
         }
     }
@@ -64,41 +48,24 @@ public class GenerateCollectionMemberFeedServiceImpl implements GenerateCollecti
         return headerList;
     }
 
-    private void createLabel(WritableSheet sheet, List<String> headerList) throws WriteException, Exception {
-        // Define a font type as arial with pt 10
-        WritableFont arial10pt = new WritableFont(WritableFont.ARIAL, 10);
-        // Define the cell format
-        arial = new WritableCellFormat(arial10pt);
-
-        // Create a bold font for header
-        WritableFont areal10ptBoldUnderline = new WritableFont(WritableFont.ARIAL, 10, WritableFont.BOLD);
-        arialBoldUnderline = new WritableCellFormat(areal10ptBoldUnderline);
-        // Automatically wrap the cells
-        arialBoldUnderline.setWrap(true);
-
-        // Write headers
+    private void createLabel(CsvWriter csvFile, List<String> headerList) throws IOException, Exception {
         for (int index = 0; index < headerList.size(); index++) {
-            addCaption(sheet, index, 0, headerList.get(index));
+            csvFile.write(headerList.get(index));
         }
+        csvFile.endRecord();
     }
 
-    private void addCaption(WritableSheet sheet, int column, int row, String s) throws WriteException, Exception {
-        Label label;
-        label = new Label(column, row, s, arialBoldUnderline);
-        sheet.addCell(label);
-    }
+    private void createCollectionMemberContent(CsvWriter csvFile, List<ItemBean> nonByoTitleList) throws IOException,
+            Exception {
 
-    private void createCollectionMemberContent(WritableSheet sheet, List<ItemBean> nonByoTitleList)
-            throws WriteException, RowsExceededException, Exception {
         ItemBean bean;
 
         if ((nonByoTitleList != null) && (nonByoTitleList.size() > 0)) {
             for (int index = 0; index < nonByoTitleList.size(); index++) {
                 bean = nonByoTitleList.get(index);
-                sheet.setColumnView(0, 20);
-                addNumber(sheet, 0, index + 1, bean.getCollections().get(0).getCollectionIsbn());
-                sheet.setColumnView(1, 20);
-                addNumber(sheet, 1, index + 1, bean.getThirteenDigitIsbn());
+                csvFile.write(bean.getCollections().get(0).getCollectionIsbn());
+                csvFile.write(bean.getThirteenDigitIsbn());
+                csvFile.endRecord();
             }
         }
     }
@@ -119,10 +86,4 @@ public class GenerateCollectionMemberFeedServiceImpl implements GenerateCollecti
         return nonByoTitleList;
     }
 
-    private void addNumber(WritableSheet sheet, int column, int row, String s) throws WriteException,
-            NumberFormatException, Exception {
-        Number number;
-        number = new Number(column, row, Double.parseDouble(s), arial);
-        sheet.addCell(number);
-    }
 }
