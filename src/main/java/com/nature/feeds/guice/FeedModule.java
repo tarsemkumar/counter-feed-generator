@@ -31,6 +31,7 @@ import com.nature.feeds.serviceimpl.GenerateCollectionFeedServiceImpl;
 import com.nature.feeds.serviceimpl.GenerateCollectionMemberFeedServiceImpl;
 import com.nature.feeds.serviceimpl.UploadFeedServiceImpl;
 import com.nature.feeds.startup.FeedGenerator;
+import com.nature.feeds.util.DBUtil;
 import com.nature.marklogic.ConnectionBean;
 import com.nature.marklogic.Connector;
 import com.nature.marklogic.ConnectorImpl;
@@ -56,6 +57,7 @@ public class FeedModule implements Module {
         binder.bind(EmailNotificationService.class).to(EmailNotificationServiceImpl.class);
         binder.bind(QueryBuilder.class);
         binder.bind(FeedGenerator.class);
+        binder.bind(DBUtil.class);
     }
 
     @Provides

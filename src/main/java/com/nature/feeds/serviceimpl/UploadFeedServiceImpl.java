@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPFile;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
@@ -29,16 +30,20 @@ public class UploadFeedServiceImpl implements UploadFeedService {
     /* This method will use to start feeds uploading process */
 
     @Override
-    public Boolean feedsUploadOperation(ArrayList<String> todaysFeedName, ArrayList<String> yesterdaysFeedNames)
+    public boolean feedsUploadOperation(String collectionFeedName, String bookFeedName, String collectionMemberFeedName)
             throws Exception {
 
-        Boolean feedsUploadOperationStepsStatus = Boolean.FALSE;
+        boolean feedsUploadOperationStepsStatus = false;
         try {
             ftpClient = new FTPClient();
-            feedsUploadOperationStepsStatus = setFtpConnection(todaysFeedName, yesterdaysFeedNames);
-            if (feedsUploadOperationStepsStatus == Boolean.TRUE) {
-                uploadTodaysFeedsOnFTPLocation(todaysFeedName);
-                deleteYesterdaysFeedsFromFTPLocation(yesterdaysFeedNames);
+            feedsUploadOperationStepsStatus = setFtpConnection();
+            if (feedsUploadOperationStepsStatus) {
+                ArrayList<String> todaysFeedNameList = getTodaysFeedNamesList(collectionFeedName, bookFeedName,
+                        collectionMemberFeedName);
+                uploadTodaysFeedsOnFTPLocation(todaysFeedNameList);
+                deleteOldFeedsFromFTPLocation();
+                deleteFolderFromFTPLocation();
+                renameBackupFolderOnFTPLocation();
                 deleteFeedsFromLocalLocation();
             }
         } finally {
@@ -53,8 +58,7 @@ public class UploadFeedServiceImpl implements UploadFeedService {
 
     /* This method will use to create connection with FTP location */
 
-    private Boolean setFtpConnection(ArrayList<String> todaysFeedsName, ArrayList<String> yesterdaysFeedNames)
-            throws Exception {
+    private boolean setFtpConnection() throws Exception {
 
         ftpClient.connect(resourceLookUp.getResource("ftp.host"),
                 Integer.parseInt(resourceLookUp.getResource("ftp.port")));
@@ -72,7 +76,7 @@ public class UploadFeedServiceImpl implements UploadFeedService {
 
         try {
             if ((todaysFeedNames != null) && (todaysFeedNames.size() > 0)) {
-                ftpClient.makeDirectory(resourceLookUp.getResource("ftp.remote.path"));
+                ftpClient.makeDirectory(resourceLookUp.getResource("ftp.backup.folder.path"));
 
                 /* These three lines are very important during feeds uploading */
                 ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
@@ -82,7 +86,7 @@ public class UploadFeedServiceImpl implements UploadFeedService {
                 for (int index = 0; index < todaysFeedNames.size(); index++) {
                     localFile = new File(resourceLookUp.getResource("file.location")
                             + resourceLookUp.getResource("file.location.seperator") + todaysFeedNames.get(index));
-                    remoteFile = resourceLookUp.getResource("ftp.remote.path") + todaysFeedNames.get(index);
+                    remoteFile = resourceLookUp.getResource("ftp.backup.folder.path") + todaysFeedNames.get(index);
                     inputStream = new FileInputStream(localFile);
                     ftpClient.storeFile(remoteFile, inputStream);
                     inputStream.close();
@@ -95,15 +99,29 @@ public class UploadFeedServiceImpl implements UploadFeedService {
         }
     }
 
-    /* This method will use to delete yesterday's feeds from FTP location */
+    /* This method will use to delete old feeds from FTP location */
 
-    private void deleteYesterdaysFeedsFromFTPLocation(ArrayList<String> yesterdaysFeedNames) throws Exception {
-        if ((yesterdaysFeedNames != null) && (yesterdaysFeedNames.size() > 0)) {
-            for (int index = 0; index < yesterdaysFeedNames.size(); index++) {
-                ftpClient.deleteFile(resourceLookUp.getResource("ftp.remote.path") + yesterdaysFeedNames.get(index));
-
+    private void deleteOldFeedsFromFTPLocation() throws Exception {
+        ftpClient.changeWorkingDirectory(resourceLookUp.getResource("ftp.old.feeds.folder.path"));
+        FTPFile[] oldFtpFeedList = ftpClient.listFiles();
+        if ((oldFtpFeedList != null) && (oldFtpFeedList.length > 0)) {
+            for (int index = 0; index < oldFtpFeedList.length; index++) {
+                ftpClient.deleteFile(resourceLookUp.getResource("ftp.old.feeds.folder.path")
+                        + oldFtpFeedList[index].getName());
             }
         }
+    }
+
+    /* This method will use to delete folder from ftp location */
+
+    private void deleteFolderFromFTPLocation() throws Exception {
+        ftpClient.removeDirectory(resourceLookUp.getResource("ftp.delete.old.feeds.folder.path"));
+    }
+
+    /* This method will use to rename backup folder */
+    private void renameBackupFolderOnFTPLocation() throws Exception {
+        ftpClient.rename(resourceLookUp.getResource("ftp.rename.backup.folder.path"),
+                resourceLookUp.getResource("ftp.delete.old.feeds.folder.path"));
     }
 
     /* This method will use to delete feeds from local location */
@@ -111,5 +129,17 @@ public class UploadFeedServiceImpl implements UploadFeedService {
     private void deleteFeedsFromLocalLocation() throws IOException {
         FileUtils.cleanDirectory(new File(resourceLookUp.getResource("file.location")
                 + resourceLookUp.getResource("file.location.seperator")));
+    }
+
+    /* This method will use to get todaysFeedNameList */
+
+    private ArrayList<String> getTodaysFeedNamesList(String collectionFeedName, String bookFeedName,
+            String collectionMemberFeedName) throws Exception {
+        ArrayList<String> todaysFeedNameList = new ArrayList<String>();
+        todaysFeedNameList.add(collectionFeedName);
+        todaysFeedNameList.add(bookFeedName);
+        todaysFeedNameList.add(collectionMemberFeedName);
+        todaysFeedNameList.trimToSize();
+        return todaysFeedNameList;
     }
 }

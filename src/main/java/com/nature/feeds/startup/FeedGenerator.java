@@ -1,7 +1,6 @@
 package com.nature.feeds.startup;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +33,9 @@ public class FeedGenerator {
     private final EmailNotificationService emailNotificationService;
     private final IResourceLookUp resourceLookUp;
     private static Logger logger = Logger.getLogger(FeedGenerator.class);
-    private ArrayList<String> todaysFeedNamesList;
+    private String collectionFeedName;
+    private String bookFeedName;
+    private String collectionMemberFeedName;
 
     @Inject
     public FeedGenerator(CollectionFeedDataService collectionFeedDataService,
@@ -58,7 +59,6 @@ public class FeedGenerator {
 
     public void fetchFeedData() {
 
-        logger.info("**** Feed generation application has been started. ****");
         try {
             logger.info("**** Phase 1:- Fetching feed data has been started. ****");
             collectionFeedDataList = collectionFeedDataService.getCollectionFeedData();
@@ -80,66 +80,34 @@ public class FeedGenerator {
     void generateFeed() throws Exception {
         logger.info("**** Phase 2:- Feed generation has been started. ****");
         String currentDateInYYYYMMDDFormat = getDateInYYYYMMDDFormat();
-        String collectionFeedName = resourceLookUp.getResource("collection") + currentDateInYYYYMMDDFormat
+        collectionFeedName = resourceLookUp.getResource("collection") + currentDateInYYYYMMDDFormat
                 + resourceLookUp.getResource("file.type");
         generateCollectionFeedService.generateCollectionFeed(collectionFeedName,
                 resourceLookUp.getResource("file.location"), collectionFeedDataList);
 
-        String bookFeedName = resourceLookUp.getResource("book") + currentDateInYYYYMMDDFormat
+        bookFeedName = resourceLookUp.getResource("book") + currentDateInYYYYMMDDFormat
                 + resourceLookUp.getResource("file.type");
         Map<String, String> groupCodes = generateBookFeedService.getCollectionGroupMap();
         generateBookFeedService.generateMpsBookFeed(bookFeedName, resourceLookUp.getResource("file.location"),
                 resultsBean, groupCodes);
-        String collectionMemberFeedName = resourceLookUp.getResource("collection.member") + currentDateInYYYYMMDDFormat
+        collectionMemberFeedName = resourceLookUp.getResource("collection.member") + currentDateInYYYYMMDDFormat
                 + resourceLookUp.getResource("file.type");
         generateCollectionMemberFeedService.generateCollctionMemberFeed(collectionMemberFeedName,
                 resourceLookUp.getResource("file.location"), resultsBean);
 
         logger.info("**** Phase 2:- Feed generation has been completed. ****");
-        todaysFeedNamesList = getTodaysFeedNamesList(collectionFeedName, bookFeedName, collectionMemberFeedName);
         uploadFeed();
-    }
-
-    /* This method will use to get todaysFeedNameList */
-
-    ArrayList<String> getTodaysFeedNamesList(String collectionFeedName, String bookFeedName,
-            String collectionMemberFeedName) throws Exception {
-        ArrayList<String> todaysFeedNameList = new ArrayList<String>();
-        todaysFeedNameList.add(collectionFeedName);
-        todaysFeedNameList.add(bookFeedName);
-        todaysFeedNameList.add(collectionMemberFeedName);
-        todaysFeedNameList.trimToSize();
-        return todaysFeedNameList;
-
-    }
-
-    /* This method will use to get yesterdaysFeedNameList */
-
-    private ArrayList<String> getYesterdaysFeedNameList() throws Exception {
-        String yesterdayDateInYYYYMMDDFormat = getYesterdayDateInYYYYMMDDFormat();
-        ArrayList<String> yesterdaysFeedNameList = new ArrayList<String>();
-        yesterdaysFeedNameList.add(resourceLookUp.getResource("collection") + yesterdayDateInYYYYMMDDFormat
-                + resourceLookUp.getResource("file.type"));
-        yesterdaysFeedNameList.add(resourceLookUp.getResource("book") + yesterdayDateInYYYYMMDDFormat
-                + resourceLookUp.getResource("file.type"));
-        yesterdaysFeedNameList.add(resourceLookUp.getResource("collection.member") + yesterdayDateInYYYYMMDDFormat
-                + resourceLookUp.getResource("file.type"));
-        yesterdaysFeedNameList.trimToSize();
-        return yesterdaysFeedNameList;
     }
 
     /* This method will use to upload all three feeds on FTP location */
 
     void uploadFeed() throws Exception {
         logger.info("**** Phase 3:- Feed uploading has been started. ****");
-        Boolean feedUploadStatus = Boolean.FALSE;
-        ArrayList<String> yesterdaysFeedNameList = getYesterdaysFeedNameList();
-        feedUploadStatus = uploadFeedService.feedsUploadOperation(todaysFeedNamesList, yesterdaysFeedNameList);
-        if (!feedUploadStatus) {
-            emailNotificationWhenFeedsDonotGenerate();
-        } else {
+        if (uploadFeedService.feedsUploadOperation(collectionFeedName, bookFeedName, collectionMemberFeedName)) {
             logger.info("**** Phase 3:- Feed uploading has been completed. ****");
             emailNotificationWhenFeedsGenerate();
+        } else {
+            emailNotificationWhenFeedsDonotGenerate();
         }
     }
 
@@ -150,7 +118,6 @@ public class FeedGenerator {
         emailNotificationService.sendEmailNotification(resourceLookUp.getResource("mail.to"),
                 resourceLookUp.getResource("mail.subject"), resourceLookUp.getResource("mail.body"));
         logger.info("**** Phase 4:- E-mail notification has been completed. ****");
-        logger.info("**** Feed generation application has been completed. ****\n\n\n");
     }
 
     /* This method will use to send email notification when feeds does not generate successfully. */
@@ -161,7 +128,6 @@ public class FeedGenerator {
                 resourceLookUp.getResource("feed.generation.failure.mail.subject"),
                 resourceLookUp.getResource("feed.generation.failure.mail.body"));
         logger.info("**** Phase 4:- E-mail notification has been completed. ****");
-        logger.info("**** Feed generation application has been completed. ****\n\n\n");
     }
 
     String getDateInYYYYMMDDFormat() throws Exception {
@@ -169,10 +135,4 @@ public class FeedGenerator {
         return sdf.format(Calendar.getInstance().getTime());
     }
 
-    private String getYesterdayDateInYYYYMMDDFormat() throws Exception {
-        SimpleDateFormat sdf = new SimpleDateFormat(resourceLookUp.getResource("date.format"));
-        Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.DATE, -1);
-        return sdf.format(cal.getTime());
-    }
 }

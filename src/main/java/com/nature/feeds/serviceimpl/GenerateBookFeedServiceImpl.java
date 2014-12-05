@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
@@ -20,17 +19,20 @@ import com.nature.components.service.resources.IResourceLookUp;
 import com.nature.feeds.bean.ItemBean;
 import com.nature.feeds.bean.ResultsBean;
 import com.nature.feeds.service.GenerateBookFeedService;
+import com.nature.feeds.util.DBUtil;
 
 public class GenerateBookFeedServiceImpl implements GenerateBookFeedService {
 
-    private Connection conn;
     private PreparedStatement stmt;
     private ResultSet rs;
     private final IResourceLookUp resourceLookUp;
+    private Connection connection;
+    private final DBUtil dBUtil;
 
     @Inject
-    public GenerateBookFeedServiceImpl(@Named("lib_resource_lookup") IResourceLookUp resourceLookUp) {
+    public GenerateBookFeedServiceImpl(@Named("lib_resource_lookup") IResourceLookUp resourceLookUp, DBUtil dBUtil) {
         this.resourceLookUp = resourceLookUp;
+        this.dBUtil = dBUtil;
     }
 
     /* This method will use to generate book feed. */
@@ -105,12 +107,10 @@ public class GenerateBookFeedServiceImpl implements GenerateBookFeedService {
     private Map<String, String> getPCProductGroupIds() throws Exception {
         Map<String, String> productGroupByGroupCodeMap = new HashMap<String, String>();
         try {
-            Class.forName(resourceLookUp.getResource("jdbc.driver"));
-            conn = DriverManager.getConnection(resourceLookUp.getResource("db.url"),
-                    resourceLookUp.getResource("user"), resourceLookUp.getResource("pass"));
             String query = " SELECT product_group_id,product_group_code "
                     + " FROM product_group ORDER BY product_group.product_group_code ";
-            stmt = conn.prepareStatement(query);
+            connection = dBUtil.openConnection();
+            stmt = connection.prepareStatement(query);
             rs = stmt.executeQuery();
             if (rs != null) {
                 while (rs.next()) {
@@ -125,9 +125,7 @@ public class GenerateBookFeedServiceImpl implements GenerateBookFeedService {
             if (stmt != null) {
                 stmt.close();
             }
-            if (conn != null) {
-                conn.close();
-            }
+            dBUtil.closeConnection(connection);
         }
         return productGroupByGroupCodeMap;
 
@@ -136,12 +134,10 @@ public class GenerateBookFeedServiceImpl implements GenerateBookFeedService {
     private Map<String, String> getPCProductGroups() throws Exception {
         Map<String, String> productGroupByIdMap = new HashMap<String, String>();
         try {
-            Class.forName(resourceLookUp.getResource("jdbc.driver"));
-            conn = DriverManager.getConnection(resourceLookUp.getResource("db.url"),
-                    resourceLookUp.getResource("user"), resourceLookUp.getResource("pass"));
             String query = " SELECT product_group_id,product_group_desc "
                     + " FROM product_group ORDER BY product_group.product_group_code ";
-            stmt = conn.prepareStatement(query);
+            connection = dBUtil.openConnection();
+            stmt = connection.prepareStatement(query);
             rs = stmt.executeQuery();
             if (rs != null) {
                 while (rs.next()) {
@@ -156,9 +152,7 @@ public class GenerateBookFeedServiceImpl implements GenerateBookFeedService {
             if (stmt != null) {
                 stmt.close();
             }
-            if (conn != null) {
-                conn.close();
-            }
+            dBUtil.closeConnection(connection);
         }
         return productGroupByIdMap;
     }

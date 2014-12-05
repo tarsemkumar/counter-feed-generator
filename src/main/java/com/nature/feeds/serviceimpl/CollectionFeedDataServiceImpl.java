@@ -1,17 +1,15 @@
 package com.nature.feeds.serviceimpl;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.google.inject.Inject;
-import com.google.inject.name.Named;
-import com.nature.components.service.resources.IResourceLookUp;
 import com.nature.feeds.bean.CollectionBean;
 import com.nature.feeds.service.CollectionFeedDataService;
+import com.nature.feeds.util.DBUtil;
 
 public class CollectionFeedDataServiceImpl implements CollectionFeedDataService {
 
@@ -20,11 +18,12 @@ public class CollectionFeedDataServiceImpl implements CollectionFeedDataService 
     private ResultSet rs;
     private List<CollectionBean> bookAndCollectionMemberFeedDataList;
     private CollectionBean collectionBean;
-    private final IResourceLookUp resourceLookUp;
+    private final DBUtil dBUtil;
 
     @Inject
-    public CollectionFeedDataServiceImpl(@Named("lib_resource_lookup") IResourceLookUp resourceLookUp) {
-        this.resourceLookUp = resourceLookUp;
+    public CollectionFeedDataServiceImpl(DBUtil dBUtil) {
+        this.dBUtil = dBUtil;
+
     }
 
     /* This method will use to get Collection feed data from Mysql data base */
@@ -32,14 +31,12 @@ public class CollectionFeedDataServiceImpl implements CollectionFeedDataService 
     @Override
     public List<CollectionBean> getCollectionFeedData() throws Exception {
         try {
-            Class.forName(resourceLookUp.getResource("jdbc.driver"));
-            conn = DriverManager.getConnection(resourceLookUp.getResource("db.url"),
-                    resourceLookUp.getResource("user"), resourceLookUp.getResource("pass"));
             String query = " SELECT product.isbn , product.product_desc , productGroup.product_group_desc "
                     + " FROM product AS product , product_group AS productGroup " + " WHERE "
                     + " product.product_code <> 'PALCONAFEE' AND " + " product.is_searchable = TRUE AND "
                     + " product.product_code <> 'BYO' AND "
                     + " product.product_group_id = productGroup.product_group_id " + " ORDER BY product.product_code ";
+            conn = dBUtil.openConnection();
             stmt = conn.prepareStatement(query);
             rs = stmt.executeQuery();
             if (rs != null) {
@@ -60,9 +57,7 @@ public class CollectionFeedDataServiceImpl implements CollectionFeedDataService 
             if (stmt != null) {
                 stmt.close();
             }
-            if (conn != null) {
-                conn.close();
-            }
+            dBUtil.closeConnection(conn);
         }
         return bookAndCollectionMemberFeedDataList;
     }
