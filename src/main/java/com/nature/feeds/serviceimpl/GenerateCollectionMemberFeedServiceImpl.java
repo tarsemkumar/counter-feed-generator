@@ -63,9 +63,12 @@ public class GenerateCollectionMemberFeedServiceImpl implements GenerateCollecti
         if ((nonByoTitleList != null) && (nonByoTitleList.size() > 0)) {
             for (int index = 0; index < nonByoTitleList.size(); index++) {
                 bean = nonByoTitleList.get(index);
-                csvFile.write(bean.getCollections().get(0).getCollectionIsbn());
-                csvFile.write(bean.getThirteenDigitIsbn());
-                csvFile.endRecord();
+                if (!(bean.getCollections().get(0).getCollectionIsbn().equals(resourceLookUp
+                        .getResource("collection.id.donot.add.in.feed")))) {
+                    csvFile.write(bean.getCollections().get(0).getCollectionIsbn());
+                    csvFile.write(bean.getThirteenDigitIsbn());
+                    csvFile.endRecord();
+                }
             }
         }
     }

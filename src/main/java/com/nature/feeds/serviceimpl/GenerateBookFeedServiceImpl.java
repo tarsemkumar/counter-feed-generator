@@ -158,6 +158,10 @@ public class GenerateBookFeedServiceImpl implements GenerateBookFeedService {
     }
 
     private String getGrouping(String collectionWorkId, Map<String, String> groupCodes) throws Exception {
-        return groupCodes.get(collectionWorkId);
+        String groupCode = groupCodes.get(collectionWorkId);
+        if (groupCode.equalsIgnoreCase(resourceLookUp.getResource("groupcode.replace.this"))) {
+            return resourceLookUp.getResource("groupcode.replace.with");
+        }
+        return groupCode;
     }
 }

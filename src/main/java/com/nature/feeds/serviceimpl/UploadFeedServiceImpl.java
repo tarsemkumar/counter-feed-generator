@@ -58,7 +58,7 @@ public class UploadFeedServiceImpl implements UploadFeedService {
 
     /* This method will use to create connection with FTP location */
 
-    private boolean setFtpConnection() throws Exception {
+    boolean setFtpConnection() throws Exception {
 
         ftpClient.connect(resourceLookUp.getResource("ftp.host"),
                 Integer.parseInt(resourceLookUp.getResource("ftp.port")));
@@ -67,8 +67,8 @@ public class UploadFeedServiceImpl implements UploadFeedService {
 
     /* This method will use to upload current feeds in FTP location */
 
-    private void uploadTodaysFeedsOnFTPLocation(ArrayList<String> todaysFeedNames) throws FileNotFoundException,
-            IOException, Exception {
+    void uploadTodaysFeedsOnFTPLocation(ArrayList<String> todaysFeedNames) throws FileNotFoundException, IOException,
+            Exception {
 
         File localFile = null;
         String remoteFile = null;
@@ -101,7 +101,7 @@ public class UploadFeedServiceImpl implements UploadFeedService {
 
     /* This method will use to delete old feeds from FTP location */
 
-    private void deleteOldFeedsFromFTPLocation() throws Exception {
+    void deleteOldFeedsFromFTPLocation() throws Exception {
         ftpClient.changeWorkingDirectory(resourceLookUp.getResource("ftp.old.feeds.folder.path"));
         FTPFile[] oldFtpFeedList = ftpClient.listFiles();
         if ((oldFtpFeedList != null) && (oldFtpFeedList.length > 0)) {
@@ -114,26 +114,26 @@ public class UploadFeedServiceImpl implements UploadFeedService {
 
     /* This method will use to delete folder from ftp location */
 
-    private void deleteFolderFromFTPLocation() throws Exception {
+    void deleteFolderFromFTPLocation() throws Exception {
         ftpClient.removeDirectory(resourceLookUp.getResource("ftp.delete.old.feeds.folder.path"));
     }
 
     /* This method will use to rename backup folder */
-    private void renameBackupFolderOnFTPLocation() throws Exception {
+    void renameBackupFolderOnFTPLocation() throws Exception {
         ftpClient.rename(resourceLookUp.getResource("ftp.rename.backup.folder.path"),
                 resourceLookUp.getResource("ftp.delete.old.feeds.folder.path"));
     }
 
     /* This method will use to delete feeds from local location */
 
-    private void deleteFeedsFromLocalLocation() throws IOException {
+    void deleteFeedsFromLocalLocation() throws IOException {
         FileUtils.cleanDirectory(new File(resourceLookUp.getResource("file.location")
                 + resourceLookUp.getResource("file.location.seperator")));
     }
 
     /* This method will use to get todaysFeedNameList */
 
-    private ArrayList<String> getTodaysFeedNamesList(String collectionFeedName, String bookFeedName,
+    ArrayList<String> getTodaysFeedNamesList(String collectionFeedName, String bookFeedName,
             String collectionMemberFeedName) throws Exception {
         ArrayList<String> todaysFeedNameList = new ArrayList<String>();
         todaysFeedNameList.add(collectionFeedName);

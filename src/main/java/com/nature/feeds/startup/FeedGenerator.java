@@ -27,6 +27,7 @@ public class FeedGenerator {
     private final BookAndCollectionMemberFeedDataService bookAndCollectionMemberFeedDataService;
     private List<CollectionBean> collectionFeedDataList;
     private ResultsBean resultsBean;
+    private ResultsBean resultsBeanForCollectionMemberFeed;
     private final GenerateBookFeedService generateBookFeedService;
     private final GenerateCollectionMemberFeedService generateCollectionMemberFeedService;
     private final UploadFeedService uploadFeedService;
@@ -62,7 +63,11 @@ public class FeedGenerator {
         try {
             logger.info("**** Phase 1:- Fetching feed data has been started. ****");
             collectionFeedDataList = collectionFeedDataService.getCollectionFeedData();
-            resultsBean = bookAndCollectionMemberFeedDataService.getBookAndCollectionMemberFeedData();
+            resultsBean = bookAndCollectionMemberFeedDataService.getBookAndCollectionMemberFeedData(resourceLookUp
+                    .getResource("get.article.metadata.function"));
+            resultsBeanForCollectionMemberFeed = bookAndCollectionMemberFeedDataService
+                    .getBookAndCollectionMemberFeedData(resourceLookUp
+                            .getResource("get.collection.member.feed.data.function"));
             logger.info("**** Phase 1:- Fetching feed data has been completed. ****");
             generateFeed();
         } catch (Exception exception) {
@@ -93,7 +98,7 @@ public class FeedGenerator {
         collectionMemberFeedName = resourceLookUp.getResource("collection.member") + currentDateInYYYYMMDDFormat
                 + resourceLookUp.getResource("file.type");
         generateCollectionMemberFeedService.generateCollctionMemberFeed(collectionMemberFeedName,
-                resourceLookUp.getResource("file.location"), resultsBean);
+                resourceLookUp.getResource("file.location"), resultsBeanForCollectionMemberFeed);
 
         logger.info("**** Phase 2:- Feed generation has been completed. ****");
         uploadFeed();

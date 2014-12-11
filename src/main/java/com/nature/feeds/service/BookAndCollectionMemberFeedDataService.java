@@ -4,6 +4,6 @@ import com.nature.feeds.bean.ResultsBean;
 
 public interface BookAndCollectionMemberFeedDataService {
 
-    public ResultsBean getBookAndCollectionMemberFeedData() throws Exception;
+    public ResultsBean getBookAndCollectionMemberFeedData(String methodNameToGetFeedData) throws Exception;
 
 }

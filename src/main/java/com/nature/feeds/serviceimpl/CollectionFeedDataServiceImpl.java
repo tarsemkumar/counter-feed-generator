@@ -35,7 +35,7 @@ public class CollectionFeedDataServiceImpl implements CollectionFeedDataService 
                     + " FROM product AS product , product_group AS productGroup " + " WHERE "
                     + " product.product_code <> 'PALCONAFEE' AND " + " product.is_searchable = TRUE AND "
                     + " product.product_code <> 'BYO' AND "
-                    + " product.product_group_id = productGroup.product_group_id " + " ORDER BY product.product_code ";
+                    + " product.product_group_id = productGroup.product_group_id " + " ORDER BY product.product_desc ";
             conn = dBUtil.openConnection();
             stmt = conn.prepareStatement(query);
             rs = stmt.executeQuery();

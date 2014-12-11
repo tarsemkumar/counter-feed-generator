@@ -69,13 +69,15 @@ public class GenerateCollectionFeedServiceImpl implements GenerateCollectionFeed
         if ((collectionFeedDataList != null) && (collectionFeedDataList.size() > 0)) {
             for (int index = 0; index < collectionFeedDataList.size(); index++) {
                 bean = collectionFeedDataList.get(index);
-                csvFile.write(bean.getIsbn());
-                csvFile.write(bean.getProductDesc());
-                csvFile.write(bean.getProductGroupDesc());
-                csvFile.write(resourceLookUp.getResource("palgrave.macmillan"));
-                csvFile.write(bean.getIsbn());
-                csvFile.write(resourceLookUp.getResource("palgrave.connect"));
-                csvFile.endRecord();
+                if (!(bean.getIsbn().equals(resourceLookUp.getResource("collection.id.donot.add.in.feed")))) {
+                    csvFile.write(bean.getIsbn());
+                    csvFile.write(bean.getProductDesc());
+                    csvFile.write(bean.getProductGroupDesc());
+                    csvFile.write(resourceLookUp.getResource("palgrave.macmillan"));
+                    csvFile.write(bean.getIsbn());
+                    csvFile.write(resourceLookUp.getResource("palgrave.connect"));
+                    csvFile.endRecord();
+                }
             }
         }
     }
