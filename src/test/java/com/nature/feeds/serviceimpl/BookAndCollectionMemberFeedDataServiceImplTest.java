@@ -49,8 +49,7 @@ public class BookAndCollectionMemberFeedDataServiceImplTest {
         when(mockIResourceLookUp.getResource("get.collection.member.feed.data.function")).thenReturn(
                 "getCollectionMemberFeedData");
 
-        ResultsBean resultsBean = bookAndCollectionMemberFeedDataServiceImpl
-                .getBookAndCollectionMemberFeedData("getTitlesDetailsForMpsFeeds");
+        ResultsBean resultsBean = bookAndCollectionMemberFeedDataServiceImpl.getBookAndCollectionMemberFeedData();
         assertNotNull(resultsBean);
         assertEquals("Book & Collection Member Feed data", "9780230288713", resultsBean.getItems().get(0)
                 .getThirteenDigitIsbn());

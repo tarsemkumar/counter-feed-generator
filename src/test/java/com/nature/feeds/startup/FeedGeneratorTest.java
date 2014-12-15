@@ -66,9 +66,7 @@ public class FeedGeneratorTest {
         List<CollectionBean> listCollectionFeedData = new ArrayList<CollectionBean>();
         when(mockCollectionFeedDataService.getCollectionFeedData()).thenReturn(listCollectionFeedData);
         ResultsBean resultsBean = new ResultsBean();
-        when(
-                mockBookAndCollectionMemberFeedDataService
-                        .getBookAndCollectionMemberFeedData("getTitlesDetailsForMpsFeeds")).thenReturn(resultsBean);
+        when(mockBookAndCollectionMemberFeedDataService.getBookAndCollectionMemberFeedData()).thenReturn(resultsBean);
         feedGenerator.fetchFeedData();
         verify(mockCollectionFeedDataService).getCollectionFeedData();
     }

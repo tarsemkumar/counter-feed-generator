@@ -34,18 +34,18 @@ public class BookAndCollectionMemberFeedDataServiceImpl implements BookAndCollec
     /* This method will use to get data from mark logic data base. */
 
     @Override
-    public ResultsBean getBookAndCollectionMemberFeedData(String methodNameToGetFeedData) throws Exception {
+    public ResultsBean getBookAndCollectionMemberFeedData() throws Exception {
 
         ResultsBean resultsBean = new ResultsBean();
-        String xmlFeedData = getTitlesDetailsForMpsFeeds(methodNameToGetFeedData);
+        String xmlFeedData = getTitlesDetailsForMpsFeeds();
         resultsBean = feedDataDigest(xmlFeedData);
         return resultsBean;
     }
 
-    private String getTitlesDetailsForMpsFeeds(String methodNameToGetFeedData) throws FatalException,
-            ExternalServiceCallerException {
+    private String getTitlesDetailsForMpsFeeds() throws FatalException, ExternalServiceCallerException {
         return invokeModule(resourceLookUp.getResource("admin.module.namespace"),
-                resourceLookUp.getResource("admin.module.uri"), methodNameToGetFeedData);
+                resourceLookUp.getResource("admin.module.uri"),
+                resourceLookUp.getResource("get.article.metadata.function"));
     }
 
     protected String invokeModule(String moduleNamespace, String moduleURI, String functionName, Object... parameters)

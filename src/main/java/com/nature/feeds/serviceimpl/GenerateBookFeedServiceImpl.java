@@ -7,6 +7,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,7 +23,7 @@ import com.nature.feeds.bean.ResultsBean;
 import com.nature.feeds.service.GenerateBookFeedService;
 import com.nature.feeds.util.DBUtil;
 
-public class GenerateBookFeedServiceImpl implements GenerateBookFeedService {
+public class GenerateBookFeedServiceImpl implements GenerateBookFeedService, Comparator<ItemBean> {
 
     private PreparedStatement stmt;
     private ResultSet rs;
@@ -43,8 +45,10 @@ public class GenerateBookFeedServiceImpl implements GenerateBookFeedService {
         File file = new File(filePath + resourceLookUp.getResource("file.location.seperator") + fileName);
         CsvWriter csvFile = new CsvWriter(new FileWriter(file, true), ',');
         try {
+            List<ItemBean> bookFeedDataWithGroupingList = getBookFeedDataWithGrouping(feedDataBeans, groupCodes);
+            Collections.sort(bookFeedDataWithGroupingList, new GenerateBookFeedServiceImpl(resourceLookUp, dBUtil));
             createLabel(csvFile, getBookFeedsHeaderList());
-            createBookContent(csvFile, feedDataBeans, groupCodes);
+            createBookContent(csvFile, bookFeedDataWithGroupingList);
         } finally {
             if (csvFile != null) {
                 csvFile.flush();
@@ -72,17 +76,17 @@ public class GenerateBookFeedServiceImpl implements GenerateBookFeedService {
         return headerList;
     }
 
-    private void createBookContent(CsvWriter csvFile, ResultsBean beans, Map<String, String> groupCodes)
-            throws IOException, Exception {
+    private void createBookContent(CsvWriter csvFile, List<ItemBean> bookFeedDataWithGroupingList) throws IOException,
+            Exception {
 
         ItemBean bean;
 
-        if (beans != null) {
-            for (int index = 0; index < beans.getItems().size(); index++) {
-                bean = beans.getItems().get(index);
+        if ((bookFeedDataWithGroupingList != null) && (bookFeedDataWithGroupingList.size() > 0)) {
+            for (int index = 0; index < bookFeedDataWithGroupingList.size(); index++) {
+                bean = bookFeedDataWithGroupingList.get(index);
                 csvFile.write(bean.getThirteenDigitIsbn());
                 csvFile.write(bean.getTitle());
-                csvFile.write(getGrouping(bean.getCollections().get(0).getCollectionWorkid(), groupCodes));
+                csvFile.write(bean.getGrouping());
                 csvFile.write(resourceLookUp.getResource("palgrave.macmillan"));
                 csvFile.write(bean.getThirteenDigitIsbn());
                 csvFile.write(resourceLookUp.getResource("palgrave.connect"));
@@ -164,4 +168,27 @@ public class GenerateBookFeedServiceImpl implements GenerateBookFeedService {
         }
         return groupCode;
     }
+
+    private List<ItemBean> getBookFeedDataWithGrouping(ResultsBean resultsBean, Map<String, String> groupCodes)
+            throws Exception {
+
+        ItemBean itemBean;
+        List<ItemBean> bookFeedDataWithGroupingList = null;
+
+        if (resultsBean != null) {
+            bookFeedDataWithGroupingList = new ArrayList<ItemBean>();
+            for (int index = 0; index < resultsBean.getItems().size(); index++) {
+                itemBean = resultsBean.getItems().get(index);
+                itemBean.setGrouping(getGrouping(itemBean.getCollections().get(0).getCollectionWorkid(), groupCodes));
+                bookFeedDataWithGroupingList.add(itemBean);
+            }
+        }
+        return bookFeedDataWithGroupingList;
+    }
+
+    @Override
+    public int compare(ItemBean itemBean1, ItemBean itemBean2) {
+        return (itemBean1.getGrouping().compareTo(itemBean2.getGrouping()));
+    }
+
 }

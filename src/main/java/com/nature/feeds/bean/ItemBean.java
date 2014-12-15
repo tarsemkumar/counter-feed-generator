@@ -13,6 +13,7 @@ public class ItemBean {
     private String doi;
     private String title;
     private final List<CollectionBean> collections;
+    private String grouping;
 
     public String getThirteenDigitIsbn() {
         return thirteenDigitIsbn;
@@ -45,4 +46,13 @@ public class ItemBean {
     public List<CollectionBean> getCollections() {
         return collections;
     }
+
+    public String getGrouping() {
+        return grouping;
+    }
+
+    public void setGrouping(String grouping) {
+        this.grouping = grouping;
+    }
+
 }

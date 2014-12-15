@@ -379,27 +379,6 @@ declare function admin:getTitlesDetailsForMpsFeeds()
 let $time-limit := xdmp:set-request-time-limit(600)
 let $documents := fn:collection(("PalgraveConnect", "palgrave_connect_pivot"))
 for $document in $documents
-order by $document/record/content/pc:ebook/pc:CustomConnect/pc:Collection/pc:CollectionWorkId ascending
-return
-<item>{
-<thirteen-digit-isbn>{$document/record/metadata/meta:isbns/meta:isbn13/fn:string()}</thirteen-digit-isbn>,
-<doi>{$document/record/metadata/meta:doi/fn:string()}</doi>,
-<title>{$document/record/metadata/meta:atitle/fn:string()}</title>,
-<collection>
-<collection-acronym>{$document/record/content/pc:ebook/pc:CustomConnect/pc:Collection/pc:CollectionAcronym/fn:string()}</collection-acronym>
-<collection-isbn>{$document/record/content/pc:ebook/pc:CustomConnect/pc:Collection/pc:CollectionISBN/fn:string()}</collection-isbn>
-<collection-workid>{$document/record/content/pc:ebook/pc:CustomConnect/pc:Collection/pc:CollectionWorkId/fn:string()}</collection-workid>
-</collection>
-}</item>
-}</results>
-};
-
-declare function admin:getCollectionMemberFeedDetails()
-{
-<results>{
-let $time-limit := xdmp:set-request-time-limit(600)
-let $documents := fn:collection(("PalgraveConnect", "palgrave_connect_pivot"))
-for $document in $documents
 order by $document/record/content/pc:ebook/pc:CustomConnect/pc:Collection/pc:CollectionISBN ascending
 return
 <item>{
@@ -414,7 +393,6 @@ return
 }</item>
 }</results>
 };
-
 
 declare function admin:getContentItemsForDOI($doi as xs:string)
 {
